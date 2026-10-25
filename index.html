@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>360 Virtual Tour Viewer</title>
+    <!-- Pannellum 360 Viewer CSS & JS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css"/>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body, html { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: system-ui, sans-serif; }
+        #panorama { width: 100vw; height: 100vh; }
+        .overlay-loader {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            color: white; font-size: 1.2rem; background: rgba(0,0,0,0.7);
+            padding: 12px 24px; border-radius: 8px; z-index: 10;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loader" class="overlay-loader">Loading 360 View...</div>
+    <div id="panorama"></div>
+
+    <script>
+        // Extract the panoramic image link from URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const imageSrc = urlParams.get('url') || 'https://pannellum.org/images/alma.jpg';
+
+        // Initialize Kuula-style Equirectangular Viewer
+        const viewer = pannellum.viewer('panorama', {
+            "type": "equirectangular",
+            "panorama": imageSrc,
+            "autoLoad": true,
+            "autoRotate": -2,
+            "compass": true,
+            "hfov": 100
+        });
+
+        viewer.on('load', () => {
+            document.getElementById('loader').style.display = 'none';
+        });
+    </script>
+</body>
+</html>
