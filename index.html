@@ -22,6 +22,9 @@
             filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.8)) !important;
         }
         .pnm-hotspot::after { content: "" !important; }
+        .pnm-hotspot.custom-arrow-icon {
+            background-image: url('https://pcfdrglvvmlrjzhwuvze.supabase.co/storage/v1/object/public/panoramas/arrow.png') !important;
+        }
         .custom-arrow-label {
             position: absolute;
             top: 46px;
@@ -58,6 +61,7 @@
         const SUPABASE_URL = 'https://pcfdrglvvmlrjzhwuvze.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_btfQ4JKEiDvRm89qO8TZFg_n1rBqVGz';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
         async function loadTour() {
             const urlParams = new URLSearchParams(window.location.search);
             const tourId = urlParams.get('id');
@@ -90,7 +94,7 @@
                     type: "info",
                     text: hs.label,
                     createTooltipFunc: function(div, args) {
-                        div.style.backgroundImage = 'url("https://pcfdrglvvmlrjzhwuvze.supabase.co/storage/v1/object/public/panoramas/arrow.png")';
+                        div.classList.add('custom-arrow-icon');
                         const lbl = document.createElement('div');
                         lbl.className = 'custom-arrow-label';
                         lbl.innerText = args.text;
