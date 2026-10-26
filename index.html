@@ -111,7 +111,7 @@
     <div id="tour-title-bar">Loading Virtual Tour...</div>
     <div id="transition-overlay"></div>
     <div id="panorama"></div>
-    <script>
+        <script>
         const SUPABASE_URL = 'https://pcfdrglvvmlrjzhwuvze.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_btfQ4JKEiDvRm89qO8TZFg_n1rBqVGz';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -134,6 +134,14 @@
                 document.getElementById('tour-title-bar').innerText = 'Tour not found.';
                 return;
             }
+
+            // AGGRESSIVE PRE-CACHING: Download all panorama images into browser memory immediately
+            scenes.forEach(scene => {
+                if (scene.panorama_url) {
+                    const img = new Image();
+                    img.src = scene.panorama_url;
+                }
+            });
 
             const scenesConfig = {};
             scenes.forEach((scene, index) => {
@@ -171,10 +179,10 @@
                             div.appendChild(container);
                         },
                         createTooltipArgs: { text: hs.label, preview: previewUrl },
-                        // Smooth zoom-in camera transition handler
+                        // Instant zoom transition using cached memory
                         clickHandlerFunc: function(evt, targetSceneId) {
                             if (window.viewer) {
-                                window.viewer.lookAt(hs.pitch, hs.yaw, 10, 350, function() {
+                                window.viewer.lookAt(hs.pitch, hs.yaw, 10, 300, function() {
                                     window.viewer.loadScene(targetSceneId);
                                     window.viewer.setHfov(100, 0);
                                 });
@@ -205,7 +213,6 @@
                 scenes: scenesConfig
             });
 
-            // Keep gyroscope active and re-engage on load
             window.viewer.on('load', function() {
                 if (window.viewer.isOrientationSupported() && !window.viewer.isOrientationActive()) {
                     window.viewer.startOrientation();
