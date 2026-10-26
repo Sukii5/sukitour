@@ -24,6 +24,23 @@
             display: none !important;
         }
 
+        /* Forcefully remove any lingering focus rings, outlines, or click highlights */
+        .pnm-info-hotspot, 
+        .pnm-info-hotspot div, 
+        .pnm-info-hotspot span {
+            -webkit-tap-highlight-color: transparent !important;
+            -webkit-touch-callout: none !important;
+            outline: none !important;
+            box-shadow: none !important;
+        }
+
+        .pnm-info-hotspot:focus, 
+        .pnm-info-hotspot:active {
+            background-color: transparent !important;
+            outline: none !important;
+            box-shadow: none !important;
+        }
+
         @keyframes floatBounce {
             0%, 100% { transform: translateY(0); }
             50% { transform: translateY(-8px); }
