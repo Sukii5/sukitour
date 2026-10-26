@@ -58,7 +58,6 @@
         const SUPABASE_URL = 'https://pcfdrglvvmlrjzhwuvze.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_btfQ4JKEiDvRm89qO8TZFg_n1rBqVGz';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
         async function loadTour() {
             const urlParams = new URLSearchParams(window.location.search);
             const tourId = urlParams.get('id');
