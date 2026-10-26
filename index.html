@@ -8,46 +8,45 @@
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body, html { width: 100%; height: 100%; margin: 0; background-color: #000; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
+        body, html { width: 100%; height: 100%; margin: 0; background-color: #000; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         #panorama { width: 100%; height: 100%; }
 
-        .pnm-info-hotspot { background: none !important; border: none !important; box-shadow: none !important; width: auto !important; height: auto !important; outline: none !important; }
-        .pnm-info-hotspot::after { display: none !important; }
-        .pnm-title { display: none !important; }
+        /* Completely neutralize Pannellum's default info hotspot wrapper */
+        .pnm-info-hotspot {
+            background: none !important;
+            background-image: none !important;
+            border: none !important;
+            box-shadow: none !important;
+            width: auto !important;
+            height: auto !important;
+        }
+        .pnm-info-hotspot::after {
+            display: none !important;
+        }
 
         @keyframes floatBounce {
             0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-6px); }
+            50% { transform: translateY(-8px); }
         }
 
-        #gyro-toggle-btn {
+        /* Hide Pannellum's default bottom-left scene title */
+        .pnm-title {
+            display: none !important;
+        }
+
+        #transition-overlay {
             position: absolute;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(15, 23, 42, 0.9);
-            color: white;
-            padding: 10px 22px;
-            border-radius: 24px;
-            font-size: 13px;
-            font-weight: 600;
-            z-index: 20;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            backdrop-filter: blur(8px);
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            outline: none;
-        }
-        #gyro-toggle-btn svg {
-            width: 16px;
-            height: 16px;
-            fill: currentColor;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s ease-in-out;
+            z-index: 99;
         }
 
-        /* Smaller navigation hotspot styling with blue highlight removed */
         .custom-arrow-container {
             position: relative;
             display: flex;
@@ -55,56 +54,38 @@
             align-items: center;
             cursor: pointer;
             animation: floatBounce 2s ease-in-out infinite;
-            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.6));
+            filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.6));
             transition: transform 0.2s ease;
-            -webkit-tap-highlight-color: transparent;
-            user-select: none;
-            outline: none;
         }
         .custom-arrow-container:hover {
-            transform: scale(1.1) translateY(-3px);
+            transform: scale(1.1) translateY(-4px);
         }
 
         .custom-arrow-icon {
-            width: 36px;
-            height: 36px;
+            width: 50px;
+            height: 50px;
             border-radius: 50%;
             background-size: cover;
             background-repeat: no-repeat;
             background-position: center;
             border: 2px solid rgba(255, 255, 255, 0.9);
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
         }
 
         .custom-arrow-label {
-            margin-top: 4px;
-            background: rgba(15, 23, 42, 0.85);
+            margin-top: 6px;
+            background: rgba(66, 73, 82, 0.85);
             color: #ffffff;
-            font-size: 10px;
-            font-weight: 500;
-            letter-spacing: 0.3px;
-            padding: 3px 8px;
-            border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            white-space: nowrap;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
-            backdrop-filter: blur(6px);
-            pointer-events: none;
-        }
-
-        .interactive-text-card {
-            background: rgba(15, 23, 42, 0.9);
-            color: #fff;
-            padding: 8px 12px;
-            border-radius: 10px;
             font-size: 11px;
-            font-weight: 500;
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            padding: 5px 12px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            white-space: nowrap;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
             backdrop-filter: blur(8px);
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
-            max-width: 180px;
-            text-align: center;
-            -webkit-tap-highlight-color: transparent;
+            pointer-events: none;
         }
 
         #tour-title-bar {
@@ -114,64 +95,26 @@
             transform: translateX(-50%);
             background: rgba(15, 23, 42, 0.85);
             color: white;
-            padding: 6px 16px;
-            border-radius: 12px;
-            font-size: 13px;
+            padding: 8px 20px;
+            border-radius: 14px;
+            font-size: 14px;
             font-weight: 600;
             letter-spacing: 0.3px;
             z-index: 10;
             border: 1px solid rgba(255, 255, 255, 0.2);
             backdrop-filter: blur(8px);
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-            pointer-events: none;
         }
     </style>
 </head>
 <body>
     <div id="tour-title-bar">Loading Virtual Tour...</div>
+    <div id="transition-overlay"></div>
     <div id="panorama"></div>
-    <button id="gyro-toggle-btn" onclick="toggleGyroscope()">
-        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-5.5-2.5l7.5-3.5-3.5-7.5-7.5 3.5 3.5 7.5z"/></svg>
-        <span id="gyro-btn-text">Enable Gyroscope</span>
-    </button>
-
     <script>
         const SUPABASE_URL = 'https://pcfdrglvvmlrjzhwuvze.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_btfQ4JKEiDvRm89qO8TZFg_n1rBqVGz';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-        function toggleGyroscope() {
-            if (!window.viewer) return;
-
-            const btnText = document.getElementById('gyro-btn-text');
-
-            if (window.viewer.isOrientationActive()) {
-                window.viewer.stopOrientation();
-                btnText.innerText = "Enable Gyroscope";
-                return;
-            }
-
-            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-                DeviceOrientationEvent.requestPermission().then(response => {
-                    if (response === 'granted') {
-                        window.viewer.startOrientation();
-                        btnText.innerText = "Disable Gyroscope";
-                    } else {
-                        alert('Gyroscope permission was denied.');
-                    }
-                }).catch(err => {
-                    console.error(err);
-                    alert('Error requesting orientation permission.');
-                });
-            } else {
-                try {
-                    window.viewer.startOrientation();
-                    btnText.innerText = "Disable Gyroscope";
-                } catch (e) {
-                    alert('Device orientation is not supported or restricted on this device/browser.');
-                }
-            }
-        }
 
         async function loadTour() {
             const urlParams = new URLSearchParams(window.location.search);
@@ -192,6 +135,7 @@
                 return;
             }
 
+            // AGGRESSIVE PRE-CACHING: Download all panorama images into browser memory immediately
             scenes.forEach(scene => {
                 if (scene.panorama_url) {
                     const img = new Image();
@@ -200,24 +144,10 @@
             });
 
             const scenesConfig = {};
-            scenes.forEach((scene) => {
+            scenes.forEach((scene, index) => {
                 const hotspots = (scene.hotspots || []).map(hs => {
                     const targetScene = scenes.find(s => s.id === hs.target_scene_id);
                     const previewUrl = targetScene ? targetScene.panorama_url : '';
-
-                    if (hs.type === 'text') {
-                        return {
-                            pitch: hs.pitch,
-                            yaw: hs.yaw,
-                            type: "info",
-                            createTooltipFunc: function(div) {
-                                const card = document.createElement('div');
-                                card.className = 'interactive-text-card';
-                                card.innerText = hs.label;
-                                div.appendChild(card);
-                            }
-                        };
-                    }
 
                     return {
                         pitch: hs.pitch,
@@ -249,11 +179,19 @@
                             div.appendChild(container);
                         },
                         createTooltipArgs: { text: hs.label, preview: previewUrl },
+                        
+                        // Zoom and fade transition handler
                         clickHandlerFunc: function(evt, targetSceneId) {
                             if (window.viewer) {
-                                window.viewer.lookAt(hs.pitch, hs.yaw, 15, 250, function() {
+                                const overlay = document.getElementById('transition-overlay');
+                                overlay.style.opacity = '1';
+
+                                window.viewer.lookAt(hs.pitch, hs.yaw, 10, 200, function() {
                                     window.viewer.loadScene(targetSceneId);
                                     window.viewer.setHfov(100, 0);
+                                    setTimeout(() => {
+                                        overlay.style.opacity = '0';
+                                    }, 100);
                                 });
                             }
                         },
@@ -266,9 +204,6 @@
                     type: "equirectangular",
                     panorama: scene.panorama_url,
                     autoLoad: true,
-                    pitch: scene.initial_pitch || 0,
-                    yaw: scene.initial_yaw || 0,
-                    hfov: scene.initial_hfov || 100,
                     hotSpots: hotspots
                 };
             });
@@ -278,10 +213,17 @@
                     firstScene: scenes[0].id,
                     sceneFadeDuration: 0,
                     compass: true,
-                    orientationOnByDefault: false,
-                    mouseZoom: true
+                    orientationOnByDefault: true,
+                    mouseZoom: true,
+                    hfov: 100
                 },
                 scenes: scenesConfig
+            });
+
+            window.viewer.on('load', function() {
+                if (window.viewer.isOrientationSupported() && !window.viewer.isOrientationActive()) {
+                    window.viewer.startOrientation();
+                }
             });
 
             window.viewer.on('scenechange', function(sceneId) {
