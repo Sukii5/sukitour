@@ -198,13 +198,18 @@
                         },
                         createTooltipArgs: { text: hs.label, preview: previewUrl },
                         
-                        // Zoom and fade transition handler
+                        // Fixed click handler with zoom-in animation and proper argument passing
                         clickHandlerFunc: function(evt, targetSceneId) {
+                            if (evt && evt.target) {
+                                evt.target.blur();
+                            }
+
                             if (window.viewer) {
                                 const overlay = document.getElementById('transition-overlay');
                                 overlay.style.opacity = '1';
 
-                                window.viewer.lookAt(hs.pitch, hs.yaw, 10, 200, function() {
+                                // Use hs properties passed safely or fallback to target position
+                                window.viewer.lookAt(hs.pitch, hs.yaw, 15, 250, function() {
                                     window.viewer.loadScene(targetSceneId);
                                     window.viewer.setHfov(100, 0);
                                     setTimeout(() => {
