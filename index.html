@@ -116,23 +116,10 @@
                 return;
             }
 
-            const scenesMap = {};
-            scenes.forEach(s => { scenesMap[s.id] = s; });
-
-            // Preload all panorama images into memory instantly on start
-            scenes.forEach(s => {
-                if (s.panorama_url) {
-                    const img = new Image();
-                    img.src = s.panorama_url;
-                }
-            });
-
-            function initScene(sceneId) {
-                const scene = scenesMap[sceneId];
-                if (!scene) return;
-
+            const scenesConfig = {};
+            scenes.forEach((scene, index) => {
                 const hotspots = (scene.hotspots || []).map(hs => {
-                    const targetScene = scenesMap[hs.target_scene_id];
+                    const targetScene = scenes.find(s => s.id === hs.target_scene_id);
                     const previewUrl = targetScene ? targetScene.panorama_url : '';
 
                     return {
@@ -165,31 +152,39 @@
                             div.appendChild(container);
                         },
                         createTooltipArgs: { text: hs.label, preview: previewUrl },
-                        clickHandlerFunc: function(evt, args) {
-                            // Instant scene switch without lookAt camera pan delay
-                            initScene(args);
-                        },
-                        clickHandlerArgs: hs.target_scene_id
+                        // Native Pannellum scene switching without teardown
+                        sceneId: hs.target_scene_id
                     };
                 });
 
-                if (window.viewer) {
-                    window.viewer.destroy();
-                }
-
-                window.viewer = pannellum.viewer('panorama', {
+                scenesConfig[scene.id] = {
+                    title: scene.title,
                     type: "equirectangular",
                     panorama: scene.panorama_url,
                     autoLoad: true,
+                    hotSpots: hotspots
+                };
+            });
+
+            window.viewer = pannellum.viewer('panorama', {
+                default: {
+                    firstScene: scenes[0].id,
+                    sceneFadeDuration: 0, // Zero fade duration for instant cut
                     compass: true,
                     orientationOnByDefault: true,
-                    hfov: 100,
-                    hotSpots: hotspots
-                });
-                document.getElementById('tour-title-bar').innerText = scene.title;
-            }
+                    hfov: 100
+                },
+                scenes: scenesConfig
+            });
 
-            initScene(scenes[0].id);
+            // Update title bar dynamically on scene change
+            window.viewer.on('scenechange', function(sceneId) {
+                if (scenesConfig[sceneId]) {
+                    document.getElementById('tour-title-bar').innerText = scenesConfig[sceneId].title;
+                }
+            });
+
+            document.getElementById('tour-title-bar').innerText = scenes[0].title;
         }
 
         loadTour();
