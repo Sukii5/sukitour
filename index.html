@@ -48,9 +48,11 @@
         }
 
         .custom-arrow-container {
-            -webkit-tap-highlight-color: transparent; /* Removes mobile blue tap box */
-            user-select: none;                        /* Prevents text highlighting */
-            outline: none;
+            -webkit-tap-highlight-color: transparent !important;
+            -webkit-touch-callout: none !important;
+            -webkit-user-select: none !important;
+            user-select: none !important;
+            outline: none !important;
             position: relative;
             display: flex;
             flex-direction: column;
@@ -60,13 +62,22 @@
             filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.6));
             transition: transform 0.2s ease;
         }
+
         .custom-arrow-container:hover {
             transform: scale(1.1) translateY(-4px);
         }
 
         .custom-arrow-container, .interactive-text-card {
             transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-            -webkit-tap-highlight-color: transparent;
+            -webkit-tap-highlight-color: transparent !important;
+        }
+
+        .custom-arrow-container * {
+            -webkit-tap-highlight-color: transparent !important;
+            -webkit-touch-callout: none !important;
+            -webkit-user-select: none !important;
+            user-select: none !important;
+            pointer-events: none; /* Let clicks pass straight through to container */
         }
 
         .custom-arrow-icon {
@@ -93,7 +104,6 @@
             white-space: nowrap;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
             backdrop-filter: blur(5px);
-            pointer-events: none;
         }
 
         #tour-title-bar {
