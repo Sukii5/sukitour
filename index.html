@@ -96,7 +96,16 @@
                     type: "info",
                     text: hs.label,
                     createTooltipFunc: function(div, args) {
-                        div.classList.add('custom-arrow-icon');
+                        // Force the background image inline to override Pannellum defaults
+                        div.style.backgroundImage = 'url("https://pcfdrglvvmlrjzhwuvze.supabase.co/storage/v1/object/public/panoramas/arrow.png")';
+                        div.style.backgroundSize = 'contain';
+                        div.style.backgroundRepeat = 'no-repeat';
+                        div.style.backgroundPosition = 'center';
+                        div.style.backgroundColor = 'transparent';
+                        div.style.border = 'none';
+                        div.style.width = '44px';
+                        div.style.height = '44px';
+
                         const lbl = document.createElement('div');
                         lbl.className = 'custom-arrow-label';
                         lbl.innerText = args.text;
