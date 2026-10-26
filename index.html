@@ -67,17 +67,12 @@
             transform: scale(1.1) translateY(-4px);
         }
 
-        .custom-arrow-container, .interactive-text-card {
-            transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-            -webkit-tap-highlight-color: transparent !important;
-        }
-
+        /* Allow clicks to register cleanly on children without pointer-events block */
         .custom-arrow-container * {
             -webkit-tap-highlight-color: transparent !important;
             -webkit-touch-callout: none !important;
             -webkit-user-select: none !important;
             user-select: none !important;
-            pointer-events: none; /* Let clicks pass straight through to container */
         }
 
         .custom-arrow-icon {
@@ -198,17 +193,18 @@
                         },
                         createTooltipArgs: { text: hs.label, preview: previewUrl },
                         
-                        // Fixed click handler with zoom-in animation and proper argument passing
                         clickHandlerFunc: function(evt, targetSceneId) {
-                            if (evt && evt.target) {
-                                evt.target.blur();
+                            console.log("Hotspot clicked! Target Scene ID:", targetSceneId);
+                            
+                            if (!targetSceneId) {
+                                console.error("Error: targetSceneId is missing or undefined for this hotspot!");
+                                return;
                             }
 
                             if (window.viewer) {
                                 const overlay = document.getElementById('transition-overlay');
                                 overlay.style.opacity = '1';
 
-                                // Use hs properties passed safely or fallback to target position
                                 window.viewer.lookAt(hs.pitch, hs.yaw, 15, 250, function() {
                                     window.viewer.loadScene(targetSceneId);
                                     window.viewer.setHfov(100, 0);
