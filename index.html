@@ -127,10 +127,14 @@
                     type: "info",
                     text: hs.label,
                     createTooltipFunc: function(div, args) {
+                        // Hide the default Pannellum wrapper box completely
+                        div.style.background = 'none';
                         div.style.backgroundColor = 'transparent';
                         div.style.border = 'none';
-                        div.style.width = 'auto';
-                        div.style.height = 'auto';
+                        div.style.boxShadow = 'none';
+                        div.style.width = '0';
+                        div.style.height = '0';
+                        div.style.overflow = 'visible';
 
                         const container = document.createElement('div');
                         container.className = 'custom-arrow-container';
