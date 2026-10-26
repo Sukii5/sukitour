@@ -38,7 +38,7 @@
             background-color: #000;
             opacity: 0;
             pointer-events: none;
-            transition: opacity 0.3s ease-in-out;
+            transition: opacity 0.25s ease-in-out;
             z-index: 99;
         }
 
@@ -69,7 +69,7 @@
 
         .custom-arrow-label {
             margin-top: 6px;
-            background: rgba(66, 73, 82, 0.85); /* Slate gray background */
+            background: rgba(66, 73, 82, 0.85);
             color: #ffffff;
             font-size: 11px;
             font-weight: 600;
@@ -104,6 +104,7 @@
 </head>
 <body>
     <div id="tour-title-bar">Loading Virtual Tour...</div>
+    <div id="transition-overlay"></div>
     <div id="panorama"></div>
     <script>
         const SUPABASE_URL = 'https://pcfdrglvvmlrjzhwuvze.supabase.co';
@@ -165,7 +166,6 @@
                             div.appendChild(container);
                         },
                         createTooltipArgs: { text: hs.label, preview: previewUrl },
-                        // Native Pannellum scene switching without teardown
                         sceneId: hs.target_scene_id
                     };
                 });
@@ -182,20 +182,52 @@
             window.viewer = pannellum.viewer('panorama', {
                 default: {
                     firstScene: scenes[0].id,
-                    sceneFadeDuration: 0, // Zero fade duration for instant cut
+                    sceneFadeDuration: 0,
                     compass: true,
                     orientationOnByDefault: true,
+                    mouseZoom: true,
                     hfov: 100
                 },
                 scenes: scenesConfig
             });
 
-            // Update title bar dynamically on scene change
+            // Ensure gyroscope controls re-engage seamlessly after touch interaction
+            window.viewer.on('load', function() {
+                if (window.viewer.isOrientationSupported() && !window.viewer.isOrientationActive()) {
+                    window.viewer.startOrientation();
+                }
+            });
+
+            const overlay = document.getElementById('transition-overlay');
+
+            // Smooth cinematic fade transition handler on hotspot clicks
             window.viewer.on('scenechange', function(sceneId) {
                 if (scenesConfig[sceneId]) {
                     document.getElementById('tour-title-bar').innerText = scenesConfig[sceneId].title;
                 }
+                // Fade back in once scene loads
+                setTimeout(() => {
+                    overlay.style.opacity = '0';
+                }, 50);
             });
+
+            // Intercept hotspot clicks to trigger fade out before switching
+            // By attaching custom click handlers dynamically to the loaded viewer hotspots
+            function attachCustomHandlers() {
+                const hotspotElements = document.querySelectorAll('.pnm-hotspot');
+                hotspotElements.forEach((el, idx) => {
+                    // Prevent duplicate bindings
+                    if (el.dataset.fadeBound) return;
+                    el.dataset.fadeBound = "true";
+                    
+                    el.addEventListener('click', function() {
+                        overlay.style.opacity = '1';
+                    });
+                });
+            }
+
+            // Periodically check/re-attach click handlers when scenes change
+            setInterval(attachCustomHandlers, 500);
 
             document.getElementById('tour-title-bar').innerText = scenes[0].title;
         }
