@@ -171,7 +171,16 @@
                             div.appendChild(container);
                         },
                         createTooltipArgs: { text: hs.label, preview: previewUrl },
-                        sceneId: hs.target_scene_id
+                        // Smooth zoom-in camera transition handler
+                        clickHandlerFunc: function(evt, targetSceneId) {
+                            if (window.viewer) {
+                                window.viewer.lookAt(hs.pitch, hs.yaw, 10, 350, function() {
+                                    window.viewer.loadScene(targetSceneId);
+                                    window.viewer.setHfov(100, 0);
+                                });
+                            }
+                        },
+                        clickHandlerArgs: hs.target_scene_id
                     };
                 });
 
@@ -196,43 +205,18 @@
                 scenes: scenesConfig
             });
 
-            // Ensure gyroscope controls re-engage seamlessly after touch interaction
+            // Keep gyroscope active and re-engage on load
             window.viewer.on('load', function() {
                 if (window.viewer.isOrientationSupported() && !window.viewer.isOrientationActive()) {
                     window.viewer.startOrientation();
                 }
             });
 
-            const overlay = document.getElementById('transition-overlay');
-
-            // Smooth cinematic fade transition handler on hotspot clicks
             window.viewer.on('scenechange', function(sceneId) {
                 if (scenesConfig[sceneId]) {
                     document.getElementById('tour-title-bar').innerText = scenesConfig[sceneId].title;
                 }
-                // Fade back in once scene loads
-                setTimeout(() => {
-                    overlay.style.opacity = '0';
-                }, 50);
             });
-
-            // Intercept hotspot clicks to trigger fade out before switching
-            // By attaching custom click handlers dynamically to the loaded viewer hotspots
-            function attachCustomHandlers() {
-                const hotspotElements = document.querySelectorAll('.pnm-hotspot');
-                hotspotElements.forEach((el, idx) => {
-                    // Prevent duplicate bindings
-                    if (el.dataset.fadeBound) return;
-                    el.dataset.fadeBound = "true";
-                    
-                    el.addEventListener('click', function() {
-                        overlay.style.opacity = '1';
-                    });
-                });
-            }
-
-            // Periodically check/re-attach click handlers when scenes change
-            setInterval(attachCustomHandlers, 500);
 
             document.getElementById('tour-title-bar').innerText = scenes[0].title;
         }
