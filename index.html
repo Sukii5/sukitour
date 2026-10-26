@@ -48,11 +48,9 @@
         }
 
         .custom-arrow-container {
-            -webkit-tap-highlight-color: transparent !important;
-            -webkit-touch-callout: none !important;
-            -webkit-user-select: none !important;
-            user-select: none !important;
-            outline: none !important;
+            -webkit-tap-highlight-color: transparent; /* Removes mobile blue tap box */
+            user-select: none;                        /* Prevents text highlighting */
+            outline: none;
             position: relative;
             display: flex;
             flex-direction: column;
@@ -62,18 +60,14 @@
             filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.6));
             transition: transform 0.2s ease;
         }
-
         .custom-arrow-container:hover {
             transform: scale(1.1) translateY(-4px);
         }
 
-        /* Allow clicks to register cleanly on children without pointer-events block */
-        .custom-arrow-container * {
-            -webkit-tap-highlight-color: transparent !important;
-            -webkit-touch-callout: none !important;
-            -webkit-user-select: none !important;
-            user-select: none !important;
-        }
+        .custom-arrow-container, .interactive-text-card {
+            transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            -webkit-tap-highlight-color: transparent;
+    }
 
         .custom-arrow-icon {
             width: 30px;
@@ -99,6 +93,7 @@
             white-space: nowrap;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
             backdrop-filter: blur(5px);
+            pointer-events: none;
         }
 
         #tour-title-bar {
@@ -193,19 +188,13 @@
                         },
                         createTooltipArgs: { text: hs.label, preview: previewUrl },
                         
+                        // Zoom and fade transition handler
                         clickHandlerFunc: function(evt, targetSceneId) {
-                            console.log("Hotspot clicked! Target Scene ID:", targetSceneId);
-                            
-                            if (!targetSceneId) {
-                                console.error("Error: targetSceneId is missing or undefined for this hotspot!");
-                                return;
-                            }
-
                             if (window.viewer) {
                                 const overlay = document.getElementById('transition-overlay');
                                 overlay.style.opacity = '1';
 
-                                window.viewer.lookAt(hs.pitch, hs.yaw, 15, 250, function() {
+                                window.viewer.lookAt(hs.pitch, hs.yaw, 10, 200, function() {
                                     window.viewer.loadScene(targetSceneId);
                                     window.viewer.setHfov(100, 0);
                                     setTimeout(() => {
