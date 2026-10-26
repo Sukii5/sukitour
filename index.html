@@ -44,19 +44,19 @@
         }
 
         .custom-arrow-icon {
-            width: 44px;
-            height: 44px;
-            background-image: url('https://pcfdrglvvmlrjzhwuvze.supabase.co/storage/v1/object/public/panoramas/arrow.png');
-            background-size: contain;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-size: cover;
             background-repeat: no-repeat;
             background-position: center;
-            /* Turns the black arrow into a clean neutral gray */
-            filter: brightness(0) saturate(100%) invert(60%) sepia(5%) saturate(300%) hue-rotate(170deg);
+            border: 2px solid rgba(255, 255, 255, 0.9);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
         }
 
         .custom-arrow-label {
             margin-top: 6px;
-            background: rgba(49, 54, 61, 0.85); /* Slate gray background */
+            background: rgba(66, 73, 82, 0.85); /* Slate gray background */
             color: #ffffff;
             font-size: 11px;
             font-weight: 600;
@@ -123,47 +123,52 @@
                 const scene = scenesMap[sceneId];
                 if (!scene) return;
 
-                const hotspots = (scene.hotspots || []).map(hs => ({
-                    pitch: hs.pitch,
-                    yaw: hs.yaw,
-                    type: "info",
-                    text: hs.label,
-                    createTooltipFunc: function(div, args) {
-                        // Hide the default Pannellum wrapper box completely
-                        div.style.background = 'none';
-                        div.style.backgroundColor = 'transparent';
-                        div.style.border = 'none';
-                        div.style.boxShadow = 'none';
-                        div.style.width = '0';
-                        div.style.height = '0';
-                        div.style.overflow = 'visible';
+                const hotspots = (scene.hotspots || []).map(hs => {
+                    const targetScene = scenesMap[hs.target_scene_id];
+                    const previewUrl = targetScene ? targetScene.panorama_url : '';
 
-                        const container = document.createElement('div');
-                        container.className = 'custom-arrow-container';
+                    return {
+                        pitch: hs.pitch,
+                        yaw: hs.yaw,
+                        type: "info",
+                        text: hs.label,
+                        createTooltipFunc: function(div, args) {
+                            div.style.backgroundColor = 'transparent';
+                            div.style.border = 'none';
+                            div.style.width = '0';
+                            div.style.height = '0';
+                            div.style.overflow = 'visible';
 
-                        const icon = document.createElement('div');
-                        icon.className = 'custom-arrow-icon';
-                        container.appendChild(icon);
+                            const container = document.createElement('div');
+                            container.className = 'custom-arrow-container';
 
-                        const lbl = document.createElement('div');
-                        lbl.className = 'custom-arrow-label';
-                        lbl.innerText = args.text;
-                        container.appendChild(lbl);
+                            const icon = document.createElement('div');
+                            icon.className = 'custom-arrow-icon';
+                            if (args.preview) {
+                                icon.style.backgroundImage = `url('${args.preview}')`;
+                            }
+                            container.appendChild(icon);
 
-                        div.appendChild(container);
-                    },
-                    createTooltipArgs: { text: hs.label },
-                    clickHandlerFunc: function(evt, args) {
-                        if (window.viewer) {
-                            window.viewer.lookAt(hs.pitch, hs.yaw, 35, 300, function() {
+                            const lbl = document.createElement('div');
+                            lbl.className = 'custom-arrow-label';
+                            lbl.innerText = args.text;
+                            container.appendChild(lbl);
+
+                            div.appendChild(container);
+                        },
+                        createTooltipArgs: { text: hs.label, preview: previewUrl },
+                        clickHandlerFunc: function(evt, args) {
+                            if (window.viewer) {
+                                window.viewer.lookAt(hs.pitch, hs.yaw, 35, 300, function() {
+                                    initScene(args);
+                                });
+                            } else {
                                 initScene(args);
-                            });
-                        } else {
-                            initScene(args);
-                        }
-                    },
-                    clickHandlerArgs: hs.target_scene_id
-                }));
+                            }
+                        },
+                        clickHandlerArgs: hs.target_scene_id
+                    };
+                });
 
                 if (window.viewer) {
                     window.viewer.destroy();
