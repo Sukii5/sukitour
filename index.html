@@ -10,7 +10,7 @@
     <style>
         body, html { width: 100%; height: 100%; margin: 0; background-color: #000; overflow: hidden; font-family: sans-serif; }
         #panorama { width: 100%; height: 100%; }
-        .pnm-hotspot {
+        .pnm-hotspot, .pnm-info-hotspot {
             cursor: pointer;
             background-size: contain !important;
             background-repeat: no-repeat !important;
@@ -21,8 +21,8 @@
             height: 44px !important;
             filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.8)) !important;
         }
-        .pnm-hotspot::after { content: "" !important; }
-        .pnm-hotspot.custom-arrow-icon {
+        .pnm-hotspot::after, .pnm-info-hotspot::after { content: "" !important; display: none !important; }
+        .pnm-info-hotspot, .custom-arrow-icon {
             background-image: url('https://pcfdrglvvmlrjzhwuvze.supabase.co/storage/v1/object/public/panoramas/arrow.png') !important;
         }
         .custom-arrow-label {
