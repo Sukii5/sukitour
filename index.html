@@ -8,51 +8,69 @@
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body, html { width: 100%; height: 100%; margin: 0; background-color: #000; overflow: hidden; font-family: sans-serif; }
+        body, html { width: 100%; height: 100%; margin: 0; background-color: #000; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         #panorama { width: 100%; height: 100%; }
-        .pnm-hotspot, .pnm-info-hotspot {
-            cursor: pointer !important;
-            background-size: contain !important;
-            background-repeat: no-repeat !important;
-            background-position: center !important;
-            background-color: transparent !important;
-            border: none !important;
-            width: 44px !important;
-            height: 44px !important;
-            background-image: url('https://pcfdrglvvmlrjzhwuvze.supabase.co/storage/v1/object/public/panoramas/arrow.png') !important;
-            filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.8)) !important;
+
+        @keyframes floatBounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
         }
-        .pnm-hotspot::after, .pnm-info-hotspot::after { 
-            display: none !important; 
+
+        .custom-arrow-container {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            animation: floatBounce 2s ease-in-out infinite;
+            filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.6));
+            transition: transform 0.2s ease;
         }
+        .custom-arrow-container:hover {
+            transform: scale(1.1) translateY(-4px);
+        }
+
+        .custom-arrow-icon {
+            width: 44px;
+            height: 44px;
+            background-image: url('https://pcfdrglvvmlrjzhwuvze.supabase.co/storage/v1/object/public/panoramas/arrow.png');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+
         .custom-arrow-label {
-            position: absolute;
-            top: 46px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.85);
+            margin-top: 6px;
+            background: rgba(15, 23, 42, 0.85);
             color: #ffffff;
-            font-size: 12px;
-            font-weight: bold;
-            padding: 4px 10px;
-            border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.3);
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            padding: 5px 12px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.25);
             white-space: nowrap;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(8px);
             pointer-events: none;
         }
+
         #tour-title-bar {
             position: absolute;
             top: 16px;
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.8);
+            background: rgba(15, 23, 42, 0.85);
             color: white;
-            padding: 8px 18px;
-            border-radius: 12px;
-            font-size: 15px;
-            font-weight: bold;
+            padding: 8px 20px;
+            border-radius: 14px;
+            font-size: 14px;
+            font-weight: 600;
+            letter-spacing: 0.3px;
             z-index: 10;
             border: 1px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(8px);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
         }
     </style>
 </head>
@@ -96,21 +114,26 @@
                     type: "info",
                     text: hs.label,
                     createTooltipFunc: function(div, args) {
-                        // Force the background image inline to override Pannellum defaults
-                        div.style.backgroundImage = 'url("https://pcfdrglvvmlrjzhwuvze.supabase.co/storage/v1/object/public/panoramas/arrow.png")';
-                        div.style.backgroundSize = 'contain';
-                        div.style.backgroundRepeat = 'no-repeat';
-                        div.style.backgroundPosition = 'center';
                         div.style.backgroundColor = 'transparent';
                         div.style.border = 'none';
-                        div.style.width = '44px';
-                        div.style.height = '44px';
+                        div.style.width = 'auto';
+                        div.style.height = 'auto';
+
+                        const container = document.createElement('div');
+                        container.className = 'custom-arrow-container';
+
+                        const icon = document.createElement('div');
+                        icon.className = 'custom-arrow-icon';
+                        container.appendChild(icon);
 
                         const lbl = document.createElement('div');
                         lbl.className = 'custom-arrow-label';
                         lbl.innerText = args.text;
-                        div.appendChild(lbl);
+                        container.appendChild(lbl);
+
+                        div.appendChild(container);
                     },
+                    
                     createTooltipArgs: { text: hs.label },
                     clickHandlerFunc: function(evt, args) {
                         if (window.viewer) {
