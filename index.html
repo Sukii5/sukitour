@@ -20,6 +20,22 @@
         }
         #panorama { width: 100%; height: 100%; }
 
+        /* Forcefully destroy every possible variation of Pannellum's native title box */
+        .pnm-title, 
+        .pnm-scene-title,
+        .pnm-scene-information, 
+        .pnm-load-box,
+        div.pnm-title,
+        div.pnm-scene-title,
+        span.pnm-scene-title,
+        div[class*="pnm-title"],
+        div[class*="scene-title"] {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+        }
+
         /* Neutralize Pannellum's default info hotspot wrapper */
         .pnm-info-hotspot {
             background: none !important;
