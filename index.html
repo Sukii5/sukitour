@@ -222,7 +222,21 @@
             const tourId = urlParams.get('id');
             if (!tourId) {
                 document.getElementById('tour-title-bar').innerText = 'Tour ID not specified.';
+                document.title = 'Pano360 Virtual Tour';
                 return;
+            }
+
+            // Fetch tour details to get the Project / Tour Name
+            let projectTitle = 'Virtual Tour';
+            const { data: tourData } = await supabaseClient
+                .from('tours')
+                .select('name, title')
+                .eq('id', tourId)
+                .single();
+
+            if (tourData) {
+                projectTitle = tourData.title || tourData.name || 'Virtual Tour';
+                document.title = projectTitle;
             }
 
             const { data: scenes, error } = await supabaseClient
@@ -233,6 +247,7 @@
 
             if (error || !scenes || scenes.length === 0) {
                 document.getElementById('tour-title-bar').innerText = 'Tour not found.';
+                document.title = 'Tour Not Found';
                 return;
             }
 
@@ -348,7 +363,9 @@
 
             window.viewer.on('scenechange', function(sceneId) {
                 if (scenesConfig[sceneId]) {
-                    document.getElementById('tour-title-bar').innerText = scenesConfig[sceneId].title;
+                    const sceneTitle = scenesConfig[sceneId].title;
+                    document.getElementById('tour-title-bar').innerText = sceneTitle;
+                    document.title = `${projectTitle} – ${sceneTitle}`;
                 }
                 
                 // Highlight active thumbnail
@@ -359,7 +376,10 @@
                 }
             });
 
-            document.getElementById('tour-title-bar').innerText = scenes[0].title;
+            const initialSceneTitle = scenes[0].title;
+            document.getElementById('tour-title-bar').innerText = initialSceneTitle;
+            document.title = `${projectTitle} – ${initialSceneTitle}`;
+
             const firstThumb = document.getElementById(`thumb-${scenes[0].id}`);
             if (firstThumb) firstThumb.classList.add('active');
         }
