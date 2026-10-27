@@ -8,10 +8,19 @@
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body, html { width: 100%; height: 100%; margin: 0; background-color: #000; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body, html { 
+            width: 100%; 
+            height: 100%; 
+            margin: 0; 
+            background-color: #0b0f17; 
+            overflow: hidden; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            user-select: none;
+            -webkit-user-select: none;
+        }
         #panorama { width: 100%; height: 100%; }
 
-        /* Completely neutralize Pannellum's default info hotspot wrapper */
+        /* Neutralize Pannellum's default info hotspot wrapper */
         .pnm-info-hotspot {
             background: none !important;
             background-image: none !important;
@@ -24,10 +33,11 @@
             display: none !important;
         }
 
-        /* Forcefully remove any lingering focus rings, outlines, or click highlights */
+        /* Forcefully remove lingering focus rings, outlines, or click highlights */
         .pnm-info-hotspot, 
         .pnm-info-hotspot div, 
-        .pnm-info-hotspot span {
+        .pnm-info-hotspot span,
+        .pnm-info-hotspot * {
             -webkit-tap-highlight-color: transparent !important;
             -webkit-touch-callout: none !important;
             outline: none !important;
@@ -43,7 +53,13 @@
 
         @keyframes floatBounce {
             0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-8px); }
+            50% { transform: translateY(-6px); }
+        }
+
+        @keyframes pulseRing {
+            0% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.6); }
+            70% { transform: scale(1.02); box-shadow: 0 0 0 10px rgba(56, 189, 248, 0); }
+            100% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(56, 189, 248, 0); }
         }
 
         /* Hide Pannellum's default bottom-left scene title */
@@ -57,7 +73,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: #000;
+            background-color: #0b0f17;
             opacity: 0;
             pointer-events: none;
             transition: opacity 0.25s ease-in-out;
@@ -65,70 +81,128 @@
         }
 
         .custom-arrow-container {
-            -webkit-tap-highlight-color: transparent; /* Removes mobile blue tap box */
-            user-select: none;                        /* Prevents text highlighting */
-            outline: none;
+            -webkit-tap-highlight-color: transparent !important;
+            -webkit-touch-callout: none !important;
+            user-select: none !important;
+            outline: none !important;
             position: relative;
             display: flex;
             flex-direction: column;
             align-items: center;
             cursor: pointer;
-            animation: floatBounce 2s ease-in-out infinite;
-            filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.6));
-            transition: transform 0.2s ease;
+            animation: floatBounce 2.5s ease-in-out infinite;
+            filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.6));
+            transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
         }
+
         .custom-arrow-container:hover {
-            transform: scale(1.1) translateY(-4px);
+            transform: scale(1.12) translateY(-4px);
         }
 
         .custom-arrow-container, .interactive-text-card {
             transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-            -webkit-tap-highlight-color: transparent;
-    }
+            -webkit-tap-highlight-color: transparent !important;
+        }
 
         .custom-arrow-icon {
-            width: 30px;
-            height: 30px;
+            width: 36px;
+            height: 36px;
             border-radius: 50%;
             background-size: cover;
             background-repeat: no-repeat;
             background-position: center;
-            border: 2px solid rgba(255, 255, 255, 0.9);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+            border: 2px solid #ffffff;
+            animation: pulseRing 2.2s infinite ease-in-out;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
         }
 
         .custom-arrow-label {
             margin-top: 6px;
-            background: rgba(66, 73, 82, 0.85);
-            color: #ffffff;
-            font-size: 8px;
-            font-weight: 500;
-            letter-spacing: 0.5px;
-            padding: 3px 8px;
+            background: rgba(15, 23, 42, 0.85);
+            color: #f8fafc;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.4px;
+            padding: 4px 10px;
             border-radius: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
             white-space: nowrap;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
-            backdrop-filter: blur(5px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
             pointer-events: none;
         }
 
         #tour-title-bar {
             position: absolute;
-            top: 16px;
+            top: 20px;
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(15, 23, 42, 0.85);
-            color: white;
-            padding: 8px 20px;
-            border-radius: 14px;
-            font-size: 14px;
+            background: rgba(15, 23, 42, 0.8);
+            color: #ffffff;
+            padding: 10px 24px;
+            border-radius: 30px;
+            font-size: 13px;
             font-weight: 600;
-            letter-spacing: 0.3px;
+            letter-spacing: 0.5px;
             z-index: 10;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            backdrop-filter: blur(8px);
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        #tour-title-bar::before {
+            content: '';
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #38bdf8;
+            box-shadow: 0 0 8px #38bdf8;
+        }
+
+        #thumbnail-tray {
+            position: absolute;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            background: rgba(15, 23, 42, 0.75);
+            padding: 8px 12px;
+            border-radius: 20px;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            z-index: 10;
+            max-width: 88vw;
+            overflow-x: auto;
+            scrollbar-width: none;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+        #thumbnail-tray::-webkit-scrollbar { display: none; }
+
+        .thumb-item {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background-size: cover;
+            background-position: center;
+            border: 2px solid rgba(255, 255, 255, 0.25);
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 0.7;
+        }
+        .thumb-item.active, .thumb-item:hover {
+            border-color: #38bdf8;
+            opacity: 1;
+            transform: scale(1.08);
+            box-shadow: 0 0 12px rgba(56, 189, 248, 0.5);
         }
     </style>
 </head>
@@ -136,6 +210,8 @@
     <div id="tour-title-bar">Loading Virtual Tour...</div>
     <div id="transition-overlay"></div>
     <div id="panorama"></div>
+    <div id="thumbnail-tray"></div>
+
     <script>
         const SUPABASE_URL = 'https://pcfdrglvvmlrjzhwuvze.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_btfQ4JKEiDvRm89qO8TZFg_n1rBqVGz';
@@ -166,6 +242,25 @@
                     const img = new Image();
                     img.src = scene.panorama_url;
                 }
+            });
+
+            // Populate horizontal scene thumbnail drawer
+            const tray = document.getElementById('thumbnail-tray');
+            scenes.forEach(s => {
+                const thumb = document.createElement('div');
+                thumb.className = 'thumb-item';
+                thumb.id = `thumb-${s.id}`;
+                if (s.panorama_url) {
+                    thumb.style.backgroundImage = `url('${s.panorama_url}')`;
+                }
+                thumb.title = s.title;
+                
+                thumb.onclick = function() {
+                    if (window.viewer) {
+                        window.viewer.loadScene(s.id);
+                    }
+                };
+                tray.appendChild(thumb);
             });
 
             const scenesConfig = {};
@@ -255,9 +350,18 @@
                 if (scenesConfig[sceneId]) {
                     document.getElementById('tour-title-bar').innerText = scenesConfig[sceneId].title;
                 }
+                
+                // Highlight active thumbnail
+                document.querySelectorAll('.thumb-item').forEach(el => el.classList.remove('active'));
+                const activeThumb = document.getElementById(`thumb-${sceneId}`);
+                if (activeThumb) {
+                    activeThumb.classList.add('active');
+                }
             });
 
             document.getElementById('tour-title-bar').innerText = scenes[0].title;
+            const firstThumb = document.getElementById(`thumb-${scenes[0].id}`);
+            if (firstThumb) firstThumb.classList.add('active');
         }
 
         loadTour();
