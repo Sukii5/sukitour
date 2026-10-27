@@ -62,8 +62,11 @@
             100% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(56, 189, 248, 0); }
         }
 
-        /* Hide Pannellum's default bottom-left scene title */
+        /* Hide Pannellum's default bottom-left scene title and compass/controls if any */
         .pnm-title {
+            display: none !important;
+        }
+        .pnm-scene-title {
             display: none !important;
         }
 
@@ -281,7 +284,9 @@
                     type: "equirectangular",
                     panorama: scene.panorama_url,
                     autoLoad: true,
-                    hotSpots: hotspots
+                    hotSpots: hotspots,
+                    // Explicitly pass empty or disable default title rendering per scene config
+                    sceneTitle: ""
                 };
             });
 
@@ -292,7 +297,8 @@
                     compass: true,
                     orientationOnByDefault: true,
                     mouseZoom: true,
-                    hfov: 100
+                    hfov: 100,
+                    showSceneTitle: false
                 },
                 scenes: scenesConfig
             });
