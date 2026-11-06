@@ -31,6 +31,16 @@
         
         #panorama { width: 100%; height: 100%; }
 
+        /* Disable tap highlight box on touch screens */
+        .pnm-hotspot, 
+        .pnm-tooltip, 
+        .hotspot, 
+        * {
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            user-select: none;
+        }
+
         /* Neutralize Pannellum's default info hotspot wrapper */
         .pnm-info-hotspot {
             background: none !important;
