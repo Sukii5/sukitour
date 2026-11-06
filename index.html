@@ -200,163 +200,36 @@
         const SUPABASE_URL = 'https://pcfdrglvvmlrjzhwuvze.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_btfQ4JKEiDvRm89qO8TZFg_n1rBqVGz';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
+    
         async function loadTour() {
             const urlParams = new URLSearchParams(window.location.search);
             const tourId = urlParams.get('id');
+            
+            console.log('[Debug] Script running. Extracted tourId:', tourId);
+    
             if (!tourId) {
                 document.getElementById('tour-title-bar').innerText = 'Tour ID not specified.';
-                document.title = 'Pano360 Studio';
                 return;
             }
-
-            // Fetch tour metadata to set the project title on the browser tab
-            let projectTitle = '';
-            const { data: tourData } = await supabaseClient
+    
+            const { data: tourData, error: tourError } = await supabaseClient
                 .from('tours')
                 .select('*')
                 .eq('id', tourId)
                 .single();
-
-            if (tourData) {
-                projectTitle = tourData.title || tourData.name || tourData.project_name || '';
-            }
-
-            const { data: scenes, error } = await supabaseClient
-                .from('scenes')
-                .select('*')
-                .eq('tour_id', tourId)
-                .order('order_index', { ascending: true });
-
-            if (error || !scenes || scenes.length === 0) {
-                document.getElementById('tour-title-bar').innerText = 'Tour not found.';
-                document.title = 'Tour Not Found';
+    
+            console.log('[Debug] Supabase Data:', tourData);
+            console.log('[Debug] Supabase Error:', tourError);
+    
+            if (tourError || !tourData) {
+                document.getElementById('tour-title-bar').innerText = 'Tour not found in database.';
                 return;
             }
-
-            // Fallback: If tours table didn't yield a title, check if scene has a project reference
-            if (!projectTitle && scenes[0].tour_title) {
-                projectTitle = scenes[0].tour_title;
-            }
-
-            // Set the browser tab title ONLY to the Project Title
-            if (projectTitle) {
-                document.title = projectTitle;
-            }
-
-            // AGGRESSIVE PRE-CACHING: Download all panorama images into browser memory immediately
-            scenes.forEach(scene => {
-                if (scene.panorama_url) {
-                    const img = new Image();
-                    img.src = scene.panorama_url;
-                }
-            });
-
-            const scenesConfig = {};
-            scenes.forEach((scene, index) => {
-                const hotspots = (scene.hotspots || []).map(hs => {
-                    const targetScene = scenes.find(s => s.id === hs.target_scene_id);
-                    const previewUrl = targetScene ? targetScene.panorama_url : '';
-
-                    return {
-                        pitch: hs.pitch,
-                        yaw: hs.yaw,
-                        type: "info",
-                        text: hs.label,
-                        createTooltipFunc: function(div, args) {
-                            div.style.backgroundColor = 'transparent';
-                            div.style.border = 'none';
-                            div.style.width = '0';
-                            div.style.height = '0';
-                            div.style.overflow = 'visible';
-
-                            const container = document.createElement('div');
-                            container.className = 'custom-arrow-container';
-
-                            const icon = document.createElement('div');
-                            icon.className = 'custom-arrow-icon';
-                            if (args.preview) {
-                                icon.style.backgroundImage = `url('${args.preview}')`;
-                            }
-                            container.appendChild(icon);
-
-                            const lbl = document.createElement('div');
-                            lbl.className = 'custom-arrow-label';
-                            lbl.innerText = args.text;
-                            container.appendChild(lbl);
-
-                            div.appendChild(container);
-                        },
-                        createTooltipArgs: { text: hs.label, preview: previewUrl },
-                        
-                        // Zoom and fade transition handler
-                        clickHandlerFunc: function(evt, targetSceneId) {
-                            if (window.viewer) {
-                                const overlay = document.getElementById('transition-overlay');
-                                overlay.style.opacity = '1';
-
-                                window.viewer.lookAt(hs.pitch, hs.yaw, 10, 200, function() {
-                                    window.viewer.loadScene(targetSceneId);
-                                    window.viewer.setHfov(100, 0);
-                                    setTimeout(() => {
-                                        overlay.style.opacity = '0';
-                                    }, 100);
-                                });
-                            }
-                        },
-                        clickHandlerArgs: hs.target_scene_id
-                    };
-                });
-
-                scenesConfig[scene.id] = {
-                    title: "", 
-                    type: "equirectangular",
-                    panorama: scene.panorama_url,
-                    autoLoad: true,
-                    hotSpots: hotspots,
-                    sceneTitle: ""
-                };
-            });
-
-            window.viewer = pannellum.viewer('panorama', {
-                default: {
-                    firstScene: scenes[0].id,
-                    sceneFadeDuration: 0,
-                    compass: true,
-                    orientationOnByDefault: true,
-                    mouseZoom: true,
-                    hfov: 100,
-                    showSceneTitle: false
-                },
-                scenes: scenesConfig
-            });
-
-            window.viewer.on('load', function() {
-                if (window.viewer.isOrientationSupported() && !window.viewer.isOrientationActive()) {
-                    window.viewer.startOrientation();
-                }
-            });
-
-            window.viewer.on('scenechange', function(sceneId) {
-                if (scenesConfig[sceneId]) {
-                    const currentSceneObj = scenes.find(s => s.id === sceneId);
-                    const sceneTitle = currentSceneObj ? currentSceneObj.title : "";
-                    document.getElementById('tour-title-bar').innerText = sceneTitle;
-                    
-                    if (projectTitle) {
-                        document.title = projectTitle;
-                    }
-                }
-            });
-
-            const initialSceneTitle = scenes[0].title;
-            document.getElementById('tour-title-bar').innerText = initialSceneTitle;
-            
-            if (projectTitle) {
-                document.title = projectTitle;
-            }
+    
+            document.getElementById('tour-title-bar').innerText = tourData.title || 'Loaded Tour';
         }
-
+    
+        // CRITICAL: Ensure the function is actually called when the page loads!
         loadTour();
     </script>
 </body>
