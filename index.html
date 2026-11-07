@@ -660,27 +660,30 @@
         objLoader.setMaterials(materials);
         
         objLoader.load(objUrl, function (object) {
+    const box = new THREE.Box3().setFromObject(object);
+    const center = box.getCenter(new THREE.Vector3());
+    
+    object.position.x = -center.x;
+    object.position.y = -box.min.y;
+    object.position.z = -center.z;
+
+    object.traverse(function (child) {
+        if (child.isMesh) {
+            child.castShadow = true;
+            child.receiveShadow = true;
             
-            // Auto-center and compute bounding box
-            const box = new THREE.Box3().setFromObject(object);
-            const center = box.getCenter(new THREE.Vector3());
-            
-            object.position.x = -center.x;
-            object.position.y = -box.min.y; // Sit flat on the ground plane
-            object.position.z = -center.z;
+            // Fixes overlapping/tearing faces by rendering both sides
+            if (Array.isArray(child.material)) {
+                child.material.forEach(mat => mat.side = THREE.DoubleSide);
+            } else if (child.material) {
+                child.material.side = THREE.DoubleSide;
+            }
+        }
+    });
 
-            // Optional: Adjust scale if your model is too large or small
-            // object.scale.set(1, 1, 1);
+    buildingGroup.add(object);
+    console.log('Model loaded cleanly with DoubleSide rendering!');
 
-            object.traverse(function (child) {
-                if (child.isMesh) {
-                    child.castShadow = true;
-                    child.receiveShadow = true;
-                }
-            });
-
-            buildingGroup.add(object);
-            console.log('Apartment OBJ + MTL loaded successfully from Supabase!');
 
         }, (xhr) => {
             console.log((xhr.loaded / xhr.total * 100) + '% loaded');
