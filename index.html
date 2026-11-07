@@ -40,6 +40,7 @@
     
     <!-- THREE.JS LOADED FIRST (Critical to prevent reference errors) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
     <!-- OrbitControls, Loaders, and GSAP -->
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/MTLLoader.js"></script>
@@ -625,66 +626,51 @@
 
         // --- LOAD CUSTOM OBJ + MTL FROM SUPABASE WITH DOUBLE-SIDED RENDERING ---
         function buildDetailedGridBuilding() {
-            while(buildingGroup.children.length > 0){ 
-                buildingGroup.remove(buildingGroup.children[0]); 
+    // Clear out any existing building meshes
+    while(buildingGroup.children.length > 0){ 
+        buildingGroup.remove(buildingGroup.children[0]); 
+    }
+    hoverableMeshList = [];
+
+    const gltfLoader = new THREE.GLTFLoader();
+    
+    // PASTE YOUR SUPABASE PUBLIC URL FOR THE .glb FILE HERE:
+    const glbUrl = 'YOUR_SUPABASE_PUBLIC_URL_FOR_BUILDING.glb';
+
+    gltfLoader.load(glbUrl, function (gltf) {
+        const object = gltf.scene;
+
+        // Auto-center and compute bounding box so it sits flat and aligned
+        const box = new THREE.Box3().setFromObject(object);
+        const center = box.getCenter(new THREE.Vector3());
+        
+        object.position.x = -center.x;
+        object.position.y = -box.min.y; // Sit flat on the ground plane
+        object.position.z = -center.z;
+
+        // Optional: Scale if your model is too large or small in the scene
+        // object.scale.set(1, 1, 1);
+
+        object.traverse(function (child) {
+            if (child.isMesh) {
+                child.castShadow = true;
+                child.receiveShadow = true;
+                // GLB handles embedded textures and materials automatically
             }
-            hoverableMeshList = [];
+        });
 
-            const mtlLoader = new THREE.MTLLoader();
-            const mtlUrl = 'https://pcfdrglvvmlrjzhwuvze.supabase.co/storage/v1/object/public/models/Apartment.mtl';
-            const objUrl = 'https://pcfdrglvvmlrjzhwuvze.supabase.co/storage/v1/object/public/models/Apartment.obj';
+        buildingGroup.add(object);
+        console.log('Clean GLB Building loaded successfully from Supabase!');
 
-            mtlLoader.load(mtlUrl, function (materials) {
-                materials.preload();
-                const objLoader = new THREE.OBJLoader();
-                objLoader.setMaterials(materials);
-                
-                objLoader.load(objUrl, function (object) {
-                    const box = new THREE.Box3().setFromObject(object);
-                    const center = box.getCenter(new THREE.Vector3());
-                    
-                    object.position.x = -center.x;
-                    object.position.y = -box.min.y;
-                    object.position.z = -center.z;
+    }, (xhr) => {
+        console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+    }, (error) => {
+        console.error('Error loading GLB model:', error);
+    });
 
-                    object.traverse(function (child) {
-                        if (child.isMesh) {
-                            child.castShadow = true;
-                            child.receiveShadow = true;
-                            
-                            // Fixes overlapping/tearing faces by rendering both sides
-                            if (Array.isArray(child.material)) {
-                                child.material.forEach(mat => mat.side = THREE.DoubleSide);
-                            } else if (child.material) {
-                                child.material.side = THREE.DoubleSide;
-                            }
-                        }
-                    });
-
-                    buildingGroup.add(object);
-                    console.log('Apartment OBJ + MTL loaded successfully from Supabase!');
-                }, (xhr) => {
-                    console.log((xhr.loaded / xhr.total * 100) + '% loaded');
-                }, (error) => {
-                    console.error('Error loading Apartment.obj:', error);
-                });
-            }, null, function (error) {
-                console.warn('Could not load MTL, loading OBJ with standard material fallback:', error);
-                const fallbackLoader = new THREE.OBJLoader();
-                fallbackLoader.load(objUrl, function (object) {
-                    object.traverse(function (child) {
-                        if (child.isMesh) {
-                            child.material = new THREE.MeshStandardMaterial({ color: 0xded9d0, roughness: 0.4, side: THREE.DoubleSide });
-                            child.castShadow = true;
-                            child.receiveShadow = true;
-                        }
-                    });
-                    buildingGroup.add(object);
-                });
-            });
-
-            createFallbackClickableZones();
-        }
+    // Keeps your database-connected interactive window click targets aligned
+    createFallbackClickableZones();
+}
 
         function createFallbackClickableZones() {
             const hitBoxMaterial = new THREE.MeshBasicMaterial({ 
