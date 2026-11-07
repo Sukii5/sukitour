@@ -647,25 +647,29 @@
 
     const mtlLoader = new THREE.MTLLoader();
     
-    // Load the material file first from your public/models folder
-    mtlLoader.load('/models/Apartment.mtl', function (materials) {
+    // PASTE YOUR SUPABASE PUBLIC URL FOR Apartment.mtl HERE:
+    const mtlUrl = 'https://pcfdrglvvmlrjzhwuvze.supabase.co/storage/v1/object/public/models/Apartment.mtl';
+    
+    // PASTE YOUR SUPABASE PUBLIC URL FOR Apartment.obj HERE:
+    const objUrl = 'https://pcfdrglvvmlrjzhwuvze.supabase.co/storage/v1/object/public/models/Apartment.obj';
+
+    mtlLoader.load(mtlUrl, function (materials) {
         materials.preload();
 
         const objLoader = new THREE.OBJLoader();
-        objLoader.setMaterials(materials); // Apply loaded materials to the obj loader
+        objLoader.setMaterials(materials);
         
-        // Load the OBJ file
-        objLoader.load('/models/Apartment.obj', function (object) {
+        objLoader.load(objUrl, function (object) {
             
             // Auto-center and compute bounding box
             const box = new THREE.Box3().setFromObject(object);
             const center = box.getCenter(new THREE.Vector3());
             
             object.position.x = -center.x;
-            object.position.y = -box.min.y; // Sit flat on the ground
+            object.position.y = -box.min.y; // Sit flat on the ground plane
             object.position.z = -center.z;
 
-            // Optional scale adjustment if needed:
+            // Optional: Adjust scale if your model is too large or small
             // object.scale.set(1, 1, 1);
 
             object.traverse(function (child) {
@@ -676,7 +680,7 @@
             });
 
             buildingGroup.add(object);
-            console.log('Apartment OBJ + MTL loaded successfully!');
+            console.log('Apartment OBJ + MTL loaded successfully from Supabase!');
 
         }, (xhr) => {
             console.log((xhr.loaded / xhr.total * 100) + '% loaded');
@@ -687,11 +691,11 @@
     }, (xhr) => {
         console.log('Loading MTL...');
     }, (error) => {
-        console.warn('Could not load Apartment.mtl, loading OBJ with standard material fallback:', error);
+        console.warn('Could not load MTL, loading OBJ with standard material fallback:', error);
         
         // Fallback if MTL fails: load OBJ with standard material
         const fallbackLoader = new THREE.OBJLoader();
-        fallbackLoader.load('/models/Apartment.obj', function (object) {
+        fallbackLoader.load(objUrl, function (object) {
             object.traverse(function (child) {
                 if (child.isMesh) {
                     child.material = new THREE.MeshStandardMaterial({ color: 0xded9d0, roughness: 0.4 });
@@ -703,16 +707,14 @@
         });
     });
 
-    // Create click zones so windows still trigger your Supabase 360° tours
     createFallbackClickableZones();
 }
 
-// Helper to keep click interactions mapped to your apartmentData units
 function createFallbackClickableZones() {
     const hitBoxMaterial = new THREE.MeshBasicMaterial({ 
         color: 0xffffff, 
         transparent: true, 
-        opacity: 0.0, // Change to 0.3 if you need to debug hitbox positions
+        opacity: 0.0, // Set to 0.3 if you need to see/debug hitbox positions
         wireframe: false 
     });
 
