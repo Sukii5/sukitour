@@ -47,6 +47,11 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css"/>
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Three.js, OrbitControls, and OBJLoader -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 
     <style>
         :root {
@@ -628,63 +633,80 @@
         }
 
         function buildDetailedGridBuilding() {
-            const floorCount = 6;
-            const floorHeight = 2.8;
-            const bWidth = 15;
-            const bDepth = 12.5;
+    // Clear out any existing building meshes
+    while(buildingGroup.children.length > 0){ 
+        buildingGroup.remove(buildingGroup.children[0]); 
+    }
+    hoverableMeshList = [];
 
-            const gfGroup = new THREE.Group();
-            const gfCore = new THREE.Mesh(
-                new THREE.BoxGeometry(bWidth - 0.4, 2.8, bDepth - 0.4),
-                new THREE.MeshStandardMaterial({ color: 0x141a22, roughness: 0.6 })
-            );
-            gfCore.position.set(0, 1.4, 0);
-            gfGroup.add(gfCore);
-            buildingGroup.add(gfGroup);
+    const objLoader = new THREE.OBJLoader();
+    
+    // Your exact Archive.org .obj link
+    const objUrl = 'https://archive.org/download/apartment_202611/Apartment.obj';
 
-            for (let f = 1; f <= floorCount; f++) {
-                const floorY = f * floorHeight;
-                const floorGroup = new THREE.Group();
+    objLoader.load(objUrl, function (object) {
+        
+        // Adjust the scale or position if your model appears too large, small, or off-center
+        object.scale.set(1, 1, 1);
+        object.position.set(0, 0, 0);
 
-                const slab = new THREE.Mesh(
-                    new THREE.BoxGeometry(bWidth + 0.6, 0.4, bDepth + 0.6),
-                    new THREE.MeshStandardMaterial({ color: COLOR_CONCRETE, roughness: 0.35 })
-                );
-                slab.position.set(0, floorY, 0);
-                slab.castShadow = true;
-                floorGroup.add(slab);
-
-                const units = [
-                    { id: `unit-${f}A`, side: -3.8, name: `Apartment ${f}A` },
-                    { id: `unit-${f}B`, side: 3.8, name: `Apartment ${f}B` }
-                ];
-
-                units.forEach(u => {
-                    const windowMesh = new THREE.Mesh(
-                        new THREE.BoxGeometry(5.2, 2.2, 0.15),
-                        new THREE.MeshPhysicalMaterial({
-                            color: COLOR_GLASS,
-                            transmission: 0.72,
-                            opacity: 0.95,
-                            transparent: true,
-                            roughness: 0.1
-                        })
-                    );
-                    windowMesh.position.set(u.side, floorY + 1.35, bDepth / 2 + 0.08);
-                    windowMesh.userData = {
-                        unitId: u.id,
-                        floor: f,
-                        name: u.name,
-                        defaultColor: COLOR_GLASS
-                    };
-
-                    hoverableMeshList.push(windowMesh);
-                    floorGroup.add(windowMesh);
+        // Apply clean materials to the loaded model parts
+        object.traverse(function (child) {
+            if (child.isMesh) {
+                child.material = new THREE.MeshStandardMaterial({
+                    color: 0xded9d0, // Concrete/light building tone
+                    roughness: 0.4,
+                    metalness: 0.1
                 });
-
-                buildingGroup.add(floorGroup);
+                child.castShadow = true;
+                child.receiveShadow = true;
             }
-        }
+        });
+
+        buildingGroup.add(object);
+        console.log('Apartment OBJ model loaded successfully!');
+
+    }, (xhr) => {
+        // Progress logger
+        console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+    }, (error) => {
+        console.error('An error happened while loading the OBJ model:', error);
+    });
+
+    // Create interactive click zones over your model so users can still click 
+    // the windows to open the apartment detail drawers and 360° tours.
+    createFallbackClickableZones();
+}
+
+// Helper to keep click interactions mapped to your apartmentData units
+function createFallbackClickableZones() {
+    const hitBoxMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0xffffff, 
+        transparent: true, 
+        opacity: 0.0, // Change to 0.3 temporarily if you need to see/debug where hitboxes sit
+        wireframe: false 
+    });
+
+    Object.keys(apartmentData).forEach((unitId) => {
+        const unitInfo = apartmentData[unitId];
+        
+        // Create an invisible clickable box matching each unit's coordinates
+        const boxGeo = new THREE.BoxGeometry(2.5, 2.2, 0.5);
+        const hitBox = new THREE.Mesh(boxGeo, hitBoxMaterial);
+
+        hitBox.position.set(unitInfo.pos.x, unitInfo.pos.y, unitInfo.pos.z);
+        
+        hitBox.userData = {
+            unitId: unitId,
+            floor: unitInfo.floor,
+            name: unitInfo.name,
+            defaultColor: 0xffffff
+        };
+
+        hoverableMeshList.push(hitBox);
+        buildingGroup.add(hitBox);
+    });
+}
 
         function setupEvents() {
             window.addEventListener('resize', onWindowResize);
