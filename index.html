@@ -38,25 +38,18 @@
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     
-    <!-- Three.js & GSAP -->
+    <!-- THREE.JS LOADED FIRST (Critical to prevent reference errors) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- OrbitControls, Loaders, and GSAP -->
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/MTLLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 
     <!-- Pannellum & Supabase JS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css"/>
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- Three.js, OrbitControls, and OBJLoader -->
-     <!-- 1. Load Three.js FIRST -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-
-<!-- 2. Load Controls and Loaders AFTER -->
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/MTLLoader.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 
     <style>
         :root {
@@ -102,7 +95,6 @@
             100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(229, 169, 60, 0); }
         }
 
-        /* --- PANNELLUM HOTSPOT STYLES --- */
         #panorama { width: 100%; height: 100%; }
 
         .pnm-hotspot, .pnm-tooltip, .hotspot, * {
@@ -482,10 +474,6 @@
         const defaultCamPos = { x: 28, y: 18, z: 30 };
         const defaultTarget = { x: 0, y: 8, z: 0 };
 
-        const COLOR_CONCRETE = 0xded9d0;
-        const COLOR_TIMBER = 0xab7d4d;
-        const COLOR_DARK_METAL = 0x1d222a;
-        const COLOR_GLASS = 0x5a88a5;
         const COLOR_HIGHLIGHT = 0xe5a93c;
 
         window.onload = async function() {
@@ -508,7 +496,6 @@
                 const { data: tours, error } = await supabaseClient.from('tours').select('*');
                 if (error) throw error;
                 if (tours && tours.length > 0) {
-                    console.log('Loaded Supabase Tours:', tours);
                     const keys = Object.keys(apartmentData);
                     tours.forEach((tour, idx) => {
                         if (keys[idx]) {
@@ -517,7 +504,6 @@
                             apartmentData[unitKey].name = tour.title || tour.name || tour.project_name || apartmentData[unitKey].name;
                         }
                     });
-                    // Fallback remaining units
                     keys.forEach(key => {
                         if (!apartmentData[key].tourId && tours[0]) {
                             apartmentData[key].tourId = tours[0].id;
@@ -637,108 +623,95 @@
             return tree;
         }
 
+        // --- LOAD CUSTOM OBJ + MTL FROM SUPABASE WITH DOUBLE-SIDED RENDERING ---
         function buildDetailedGridBuilding() {
-    // Clear out any existing building meshes
-    while(buildingGroup.children.length > 0){ 
-        buildingGroup.remove(buildingGroup.children[0]); 
-    }
-    hoverableMeshList = [];
-
-    const mtlLoader = new THREE.MTLLoader();
-    
-    // PASTE YOUR SUPABASE PUBLIC URL FOR Apartment.mtl HERE:
-    const mtlUrl = 'https://pcfdrglvvmlrjzhwuvze.supabase.co/storage/v1/object/public/models/Apartment.mtl';
-    
-    // PASTE YOUR SUPABASE PUBLIC URL FOR Apartment.obj HERE:
-    const objUrl = 'https://pcfdrglvvmlrjzhwuvze.supabase.co/storage/v1/object/public/models/Apartment.obj';
-
-    mtlLoader.load(mtlUrl, function (materials) {
-        materials.preload();
-
-        const objLoader = new THREE.OBJLoader();
-        objLoader.setMaterials(materials);
-        
-        objLoader.load(objUrl, function (object) {
-    const box = new THREE.Box3().setFromObject(object);
-    const center = box.getCenter(new THREE.Vector3());
-    
-    object.position.x = -center.x;
-    object.position.y = -box.min.y;
-    object.position.z = -center.z;
-
-    object.traverse(function (child) {
-        if (child.isMesh) {
-            child.castShadow = true;
-            child.receiveShadow = true;
-            
-            // Fixes overlapping/tearing faces by rendering both sides
-            if (Array.isArray(child.material)) {
-                child.material.forEach(mat => mat.side = THREE.DoubleSide);
-            } else if (child.material) {
-                child.material.side = THREE.DoubleSide;
+            while(buildingGroup.children.length > 0){ 
+                buildingGroup.remove(buildingGroup.children[0]); 
             }
-        }
-    });
+            hoverableMeshList = [];
 
-    buildingGroup.add(object);
-    console.log('Model loaded cleanly with DoubleSide rendering!');
+            const mtlLoader = new THREE.MTLLoader();
+            const mtlUrl = 'https://pcfdrglvvmlrjzhwuvze.supabase.co/storage/v1/object/public/models/Apartment.mtl';
+            const objUrl = 'https://pcfdrglvvmlrjzhwuvze.supabase.co/storage/v1/object/public/models/Apartment.obj';
 
+            mtlLoader.load(mtlUrl, function (materials) {
+                materials.preload();
+                const objLoader = new THREE.OBJLoader();
+                objLoader.setMaterials(materials);
+                
+                objLoader.load(objUrl, function (object) {
+                    const box = new THREE.Box3().setFromObject(object);
+                    const center = box.getCenter(new THREE.Vector3());
+                    
+                    object.position.x = -center.x;
+                    object.position.y = -box.min.y;
+                    object.position.z = -center.z;
 
-        }, (xhr) => {
-            console.log((xhr.loaded / xhr.total * 100) + '% loaded');
-        }, (error) => {
-            console.error('Error loading Apartment.obj:', error);
-        });
+                    object.traverse(function (child) {
+                        if (child.isMesh) {
+                            child.castShadow = true;
+                            child.receiveShadow = true;
+                            
+                            // Fixes overlapping/tearing faces by rendering both sides
+                            if (Array.isArray(child.material)) {
+                                child.material.forEach(mat => mat.side = THREE.DoubleSide);
+                            } else if (child.material) {
+                                child.material.side = THREE.DoubleSide;
+                            }
+                        }
+                    });
 
-    }, (xhr) => {
-        console.log('Loading MTL...');
-    }, (error) => {
-        console.warn('Could not load MTL, loading OBJ with standard material fallback:', error);
-        
-        // Fallback if MTL fails: load OBJ with standard material
-        const fallbackLoader = new THREE.OBJLoader();
-        fallbackLoader.load(objUrl, function (object) {
-            object.traverse(function (child) {
-                if (child.isMesh) {
-                    child.material = new THREE.MeshStandardMaterial({ color: 0xded9d0, roughness: 0.4 });
-                    child.castShadow = true;
-                    child.receiveShadow = true;
-                }
+                    buildingGroup.add(object);
+                    console.log('Apartment OBJ + MTL loaded successfully from Supabase!');
+                }, (xhr) => {
+                    console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+                }, (error) => {
+                    console.error('Error loading Apartment.obj:', error);
+                });
+            }, null, function (error) {
+                console.warn('Could not load MTL, loading OBJ with standard material fallback:', error);
+                const fallbackLoader = new THREE.OBJLoader();
+                fallbackLoader.load(objUrl, function (object) {
+                    object.traverse(function (child) {
+                        if (child.isMesh) {
+                            child.material = new THREE.MeshStandardMaterial({ color: 0xded9d0, roughness: 0.4, side: THREE.DoubleSide });
+                            child.castShadow = true;
+                            child.receiveShadow = true;
+                        }
+                    });
+                    buildingGroup.add(object);
+                });
             });
-            buildingGroup.add(object);
-        });
-    });
 
-    createFallbackClickableZones();
-}
+            createFallbackClickableZones();
+        }
 
-function createFallbackClickableZones() {
-    const hitBoxMaterial = new THREE.MeshBasicMaterial({ 
-        color: 0xffffff, 
-        transparent: true, 
-        opacity: 0.0, // Set to 0.3 if you need to see/debug hitbox positions
-        wireframe: false 
-    });
+        function createFallbackClickableZones() {
+            const hitBoxMaterial = new THREE.MeshBasicMaterial({ 
+                color: 0xffffff, 
+                transparent: true, 
+                opacity: 0.0, 
+                wireframe: false 
+            });
 
-    Object.keys(apartmentData).forEach((unitId) => {
-        const unitInfo = apartmentData[unitId];
-        
-        const boxGeo = new THREE.BoxGeometry(2.5, 2.2, 0.5);
-        const hitBox = new THREE.Mesh(boxGeo, hitBoxMaterial);
+            Object.keys(apartmentData).forEach((unitId) => {
+                const unitInfo = apartmentData[unitId];
+                const boxGeo = new THREE.BoxGeometry(2.5, 2.2, 0.5);
+                const hitBox = new THREE.Mesh(boxGeo, hitBoxMaterial);
 
-        hitBox.position.set(unitInfo.pos.x, unitInfo.pos.y, unitInfo.pos.z);
-        
-        hitBox.userData = {
-            unitId: unitId,
-            floor: unitInfo.floor,
-            name: unitInfo.name,
-            defaultColor: 0xffffff
-        };
+                hitBox.position.set(unitInfo.pos.x, unitInfo.pos.y, unitInfo.pos.z);
+                
+                hitBox.userData = {
+                    unitId: unitId,
+                    floor: unitInfo.floor,
+                    name: unitInfo.name,
+                    defaultColor: 0xffffff
+                };
 
-        hoverableMeshList.push(hitBox);
-        buildingGroup.add(hitBox);
-    });
-}
+                hoverableMeshList.push(hitBox);
+                buildingGroup.add(hitBox);
+            });
+        }
 
         function setupEvents() {
             window.addEventListener('resize', onWindowResize);
@@ -896,7 +869,6 @@ function createFallbackClickableZones() {
             closeModal();
         }
 
-        // --- LAUNCH EXACT SUPABASE PANNELLUM TOUR FOR SELECTED APARTMENT ---
         function launchCurrentApartmentTour() {
             const apt = apartmentData[selectedApartment] || apartmentData['unit-4B'];
             const targetId = apt.tourId || 'demo-tour-id';
@@ -1075,14 +1047,12 @@ function createFallbackClickableZones() {
             document.title = 'Aria Residence | Interactive Luxury Living & Virtual Tours';
         }
 
-        // --- THREE.JS RENDER LOOP ---
+        // --- THREE.JS RENDER LOOP (SPINNING REMOVED) ---
         function animate() {
             requestAnimationFrame(animate);
             controls.update();
-
-            if (!selectedApartment && buildingGroup) {
-                buildingGroup.rotation.y += 0.0012;
-            }
+            
+            // NOTE: buildingGroup.rotation.y += 0.0012 has been removed so the model stays completely still.
 
             renderer.render(scene, camera);
         }
