@@ -52,6 +52,12 @@
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <!-- Three.js, OrbitControls, OBJLoader, and MTLLoader -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/MTLLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 
     <style>
         :root {
@@ -639,42 +645,65 @@
     }
     hoverableMeshList = [];
 
-    const objLoader = new THREE.OBJLoader();
+    const mtlLoader = new THREE.MTLLoader();
     
-    // Your exact Archive.org .obj link
-    const objUrl = 'https://archive.org/download/apartment_202611/Apartment.obj';
+    // Load the material file first from your public/models folder
+    mtlLoader.load('/models/Apartment.mtl', function (materials) {
+        materials.preload();
 
-    objLoader.load(objUrl, function (object) {
+        const objLoader = new THREE.OBJLoader();
+        objLoader.setMaterials(materials); // Apply loaded materials to the obj loader
         
-        // Adjust the scale or position if your model appears too large, small, or off-center
-        object.scale.set(1, 1, 1);
-        object.position.set(0, 0, 0);
+        // Load the OBJ file
+        objLoader.load('/models/Apartment.obj', function (object) {
+            
+            // Auto-center and compute bounding box
+            const box = new THREE.Box3().setFromObject(object);
+            const center = box.getCenter(new THREE.Vector3());
+            
+            object.position.x = -center.x;
+            object.position.y = -box.min.y; // Sit flat on the ground
+            object.position.z = -center.z;
 
-        // Apply clean materials to the loaded model parts
-        object.traverse(function (child) {
-            if (child.isMesh) {
-                child.material = new THREE.MeshStandardMaterial({
-                    color: 0xded9d0, // Concrete/light building tone
-                    roughness: 0.4,
-                    metalness: 0.1
-                });
-                child.castShadow = true;
-                child.receiveShadow = true;
-            }
+            // Optional scale adjustment if needed:
+            // object.scale.set(1, 1, 1);
+
+            object.traverse(function (child) {
+                if (child.isMesh) {
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                }
+            });
+
+            buildingGroup.add(object);
+            console.log('Apartment OBJ + MTL loaded successfully!');
+
+        }, (xhr) => {
+            console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+        }, (error) => {
+            console.error('Error loading Apartment.obj:', error);
         });
 
-        buildingGroup.add(object);
-        console.log('Apartment OBJ model loaded successfully!');
-
     }, (xhr) => {
-        // Progress logger
-        console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+        console.log('Loading MTL...');
     }, (error) => {
-        console.error('An error happened while loading the OBJ model:', error);
+        console.warn('Could not load Apartment.mtl, loading OBJ with standard material fallback:', error);
+        
+        // Fallback if MTL fails: load OBJ with standard material
+        const fallbackLoader = new THREE.OBJLoader();
+        fallbackLoader.load('/models/Apartment.obj', function (object) {
+            object.traverse(function (child) {
+                if (child.isMesh) {
+                    child.material = new THREE.MeshStandardMaterial({ color: 0xded9d0, roughness: 0.4 });
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                }
+            });
+            buildingGroup.add(object);
+        });
     });
 
-    // Create interactive click zones over your model so users can still click 
-    // the windows to open the apartment detail drawers and 360° tours.
+    // Create click zones so windows still trigger your Supabase 360° tours
     createFallbackClickableZones();
 }
 
@@ -683,14 +712,13 @@ function createFallbackClickableZones() {
     const hitBoxMaterial = new THREE.MeshBasicMaterial({ 
         color: 0xffffff, 
         transparent: true, 
-        opacity: 0.0, // Change to 0.3 temporarily if you need to see/debug where hitboxes sit
+        opacity: 0.0, // Change to 0.3 if you need to debug hitbox positions
         wireframe: false 
     });
 
     Object.keys(apartmentData).forEach((unitId) => {
         const unitInfo = apartmentData[unitId];
         
-        // Create an invisible clickable box matching each unit's coordinates
         const boxGeo = new THREE.BoxGeometry(2.5, 2.2, 0.5);
         const hitBox = new THREE.Mesh(boxGeo, hitBoxMaterial);
 
