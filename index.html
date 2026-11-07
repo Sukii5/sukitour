@@ -66,7 +66,6 @@
             -webkit-tap-highlight-color: transparent;
         }
         
-        /* Custom Scrollbar */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #0f1318; }
         ::-webkit-scrollbar-thumb { background: #2b3544; border-radius: 3px; }
@@ -93,7 +92,7 @@
             100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(229, 169, 60, 0); }
         }
 
-        /* --- PANNELLUM CUSTOM HOTSPOT STYLES --- */
+        /* --- PANNELLUM HOTSPOT STYLES --- */
         #panorama { width: 100%; height: 100%; }
 
         .pnm-hotspot, .pnm-tooltip, .hotspot, * {
@@ -214,7 +213,6 @@
         <div id="transition-overlay"></div>
         <div id="panorama"></div>
 
-        <!-- Back to Exterior 3D Model Floating Button -->
         <button onclick="closeTourViewer()" class="absolute bottom-6 left-1/2 -translate-x-1/2 z-50 glass-panel hover:bg-white/10 text-white px-6 py-3 rounded-full text-xs font-bold uppercase tracking-wider flex items-center space-x-2 transition shadow-2xl border border-white/20">
             <i data-lucide="building" class="w-4 h-4 text-brand-gold"></i>
             <span>Exit 360° Tour to Building View</span>
@@ -224,7 +222,6 @@
     <!-- MAIN EXTERIOR UI OVERLAY -->
     <div id="ui-overlay" class="relative z-10 flex flex-col justify-between min-h-screen pointer-events-none p-4 md:p-8">
         
-        <!-- HEADER / NAVIGATION -->
         <header class="w-full flex items-center justify-between pointer-events-auto">
             <div class="flex items-center space-x-3 cursor-pointer" onclick="resetView()">
                 <div class="w-10 h-10 rounded-xl bg-brand-gold flex items-center justify-center text-slate-950 font-bold text-xl shadow-lg shadow-brand-gold/20">A</div>
@@ -271,7 +268,7 @@
                 Find your <br><span class="text-transparent bg-clip-text bg-gradient-to-r from-brand-gold via-amber-300 to-amber-500">home in Aria.</span>
             </h1>
             <p class="text-slate-300 text-sm md:text-base mb-6 leading-relaxed max-w-md">
-                Architectural luxury featuring timber loggia balconies, low-E triple glazing, and direct high-definition 360° virtual tours.
+                Architectural luxury featuring timber loggia balconies, low-E triple glazing, and direct database-connected 360° virtual tours.
             </p>
 
             <div class="flex flex-wrap items-center gap-3">
@@ -292,7 +289,7 @@
                 <div class="flex items-center justify-between mb-4 border-b border-slate-800 pb-4">
                     <div>
                         <span class="text-xs uppercase tracking-wider font-semibold text-brand-gold font-mono" id="apt-category">2 Bedrooms • 64 m²</span>
-                        <h2 class="text-3xl font-extrabold text-white" id="apt-title">Apartment 4B</h2>
+                        <h2 class="text-2xl font-extrabold text-white" id="apt-title">Loading Tour Title...</h2>
                     </div>
                     <button onclick="closeApartmentDetail()" class="w-9 h-9 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-white transition">
                         <i data-lucide="x" class="w-5 h-5"></i>
@@ -339,7 +336,7 @@
                     </div>
                 </div>
 
-                <!-- DIRECT PANNELLUM SUPABASE 360 TOUR LAUNCHER BUTTON -->
+                <!-- DIRECT PANNELLUM SUPABASE TOUR LAUNCHER -->
                 <div class="mb-6">
                     <button onclick="launchCurrentApartmentTour()" class="w-full py-4 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-extrabold rounded-2xl text-sm uppercase tracking-wider transition shadow-xl shadow-sky-500/25 flex items-center justify-center space-x-2.5">
                         <i data-lucide="eye" class="w-5 h-5 animate-pulse"></i>
@@ -387,7 +384,7 @@
         <div id="bottom-controls" class="w-full flex flex-col md:flex-row items-center justify-between gap-4 pointer-events-auto">
             <div class="flex items-center space-x-2 text-xs text-slate-300 glass-panel px-4 py-2 rounded-full">
                 <i data-lucide="mouse-pointer-click" class="w-4 h-4 text-brand-gold animate-pulse"></i>
-                <span>Click any apartment window to open specs and launch 360° tour</span>
+                <span>Click any building window to view its Supabase tour project</span>
             </div>
 
             <div class="glass-panel px-3 py-1.5 rounded-full flex items-center space-x-1 text-xs font-semibold text-slate-300">
@@ -406,8 +403,8 @@
     <div id="hover-tooltip" class="apartment-tooltip fixed top-0 left-0 glass-panel px-3.5 py-2.5 rounded-2xl shadow-2xl flex items-center space-x-3 opacity-0 z-50 pointer-events-none transform -translate-x-1/2 -translate-y-full mb-3 border border-brand-gold/50">
         <div class="w-2.5 h-2.5 rounded-full bg-brand-gold pulse-dot"></div>
         <div>
-            <div class="text-xs font-extrabold text-white leading-none" id="tooltip-title">Apartment 4B</div>
-            <div class="text-[10px] text-brand-gold font-bold mt-1" id="tooltip-sub">2 Bedrooms • €299,200</div>
+            <div class="text-xs font-extrabold text-white leading-none" id="tooltip-title">Loading...</div>
+            <div class="text-[10px] text-brand-gold font-bold mt-1" id="tooltip-sub">Supabase Tour Project</div>
         </div>
     </div>
 
@@ -443,29 +440,29 @@
     </div>
 
     <script>
-        // --- SUPABASE CONFIGURATION FROM INDEX_2.HTML ---
+        // --- SUPABASE CONFIGURATION ---
         const SUPABASE_URL = 'https://pcfdrglvvmlrjzhwuvze.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_btfQ4JKEiDvRm89qO8TZFg_n1rBqVGz';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // --- APARTMENT DATA MAP & TOUR ID LINKING ---
+        // --- APARTMENT DATA MAP ---
         const apartmentData = {
-            'unit-1A': { name: 'Apartment 1A', floor: 1, price: '€215,000', sqmPrice: '€4,479 / m²', rooms: '1 Bedroom • 48 m²', area: '48 m²', orient: 'South', date: 'Autumn 2026', tourId: 'demo-tour-id', pos: { x: -3.8, y: 3.6, z: 6 } },
-            'unit-1B': { name: 'Apartment 1B', floor: 1, price: '€242,000', sqmPrice: '€4,033 / m²', rooms: '2 Bedrooms • 60 m²', area: '60 m²', orient: 'South-East', date: 'Autumn 2026', tourId: 'demo-tour-id', pos: { x: 3.8, y: 3.6, z: 6 } },
-            'unit-2A': { name: 'Apartment 2A', floor: 2, price: '€238,000', sqmPrice: '€4,103 / m²', rooms: '2 Bedrooms • 58 m²', area: '58 m²', orient: 'West', date: 'Winter 2026', tourId: 'demo-tour-id', pos: { x: -3.8, y: 6.4, z: 6 } },
-            'unit-2B': { name: 'Apartment 2B', floor: 2, price: '€262,000', sqmPrice: '€4,030 / m²', rooms: '2 Bedrooms • 65 m²', area: '65 m²', orient: 'South-West', date: 'Winter 2026', tourId: 'demo-tour-id', pos: { x: 3.8, y: 6.4, z: 6 } },
-            'unit-3A': { name: 'Apartment 3A', floor: 3, price: '€245,000', sqmPrice: '€3,828 / m²', rooms: '2 Bedrooms • 64 m²', area: '64 m²', orient: 'South', date: 'Spring 2027', tourId: 'demo-tour-id', pos: { x: -3.8, y: 9.2, z: 6 } },
-            'unit-3B': { name: 'Apartment 3B', floor: 3, price: '€278,000', sqmPrice: '€3,657 / m²', rooms: '3 Bedrooms • 76 m²', area: '76 m²', orient: 'East', date: 'Spring 2027', tourId: 'demo-tour-id', pos: { x: 3.8, y: 9.2, z: 6 } },
-            'unit-4A': { name: 'Apartment 4A', floor: 4, price: '€285,000', sqmPrice: '€4,384 / m²', rooms: '2 Bedrooms • 65 m²', area: '65 m²', orient: 'North-West', date: 'Spring 2027', tourId: 'demo-tour-id', pos: { x: -3.8, y: 12.0, z: 6 } },
-            'unit-4B': { name: 'Apartment 4B', floor: 4, price: '€299,200', sqmPrice: '€4,675 / m²', rooms: '2 Bedrooms • 64 m²', area: '64 m²', orient: 'South-West', date: 'Spring 2027', tourId: 'demo-tour-id', pos: { x: 3.8, y: 12.0, z: 6 } },
-            'unit-5A': { name: 'Penthouse 5A', floor: 5, price: '€440,000', sqmPrice: '€4,190 / m²', rooms: '3 Bedrooms • 105 m²', area: '105 m²', orient: 'Panoramic', date: 'Summer 2027', tourId: 'demo-tour-id', pos: { x: -3.8, y: 14.8, z: 6 } },
-            'unit-5B': { name: 'Penthouse 5B', floor: 5, price: '€480,000', sqmPrice: '€3,870 / m²', rooms: '4 Bedrooms • 124 m²', area: '124 m²', orient: 'Panoramic', date: 'Summer 2027', tourId: 'demo-tour-id', pos: { x: 3.8, y: 14.8, z: 6 } },
-            'unit-6A': { name: 'Sky Suite 6A', floor: 6, price: '€560,000', sqmPrice: '€3,612 / m²', rooms: 'Luxury Suite • 155 m²', area: '155 m²', orient: '360 View', date: 'Summer 2027', tourId: 'demo-tour-id', pos: { x: 0, y: 17.6, z: 6 } }
+            'unit-1A': { name: 'Apartment 1A', floor: 1, price: '€215,000', sqmPrice: '€4,479 / m²', rooms: '1 Bedroom • 48 m²', area: '48 m²', orient: 'South', date: 'Autumn 2026', tourId: '', pos: { x: -3.8, y: 3.6, z: 6 } },
+            'unit-1B': { name: 'Apartment 1B', floor: 1, price: '€242,000', sqmPrice: '€4,033 / m²', rooms: '2 Bedrooms • 60 m²', area: '60 m²', orient: 'South-East', date: 'Autumn 2026', tourId: '', pos: { x: 3.8, y: 3.6, z: 6 } },
+            'unit-2A': { name: 'Apartment 2A', floor: 2, price: '€238,000', sqmPrice: '€4,103 / m²', rooms: '2 Bedrooms • 58 m²', area: '58 m²', orient: 'West', date: 'Winter 2026', tourId: '', pos: { x: -3.8, y: 6.4, z: 6 } },
+            'unit-2B': { name: 'Apartment 2B', floor: 2, price: '€262,000', sqmPrice: '€4,030 / m²', rooms: '2 Bedrooms • 65 m²', area: '65 m²', orient: 'South-West', date: 'Winter 2026', tourId: '', pos: { x: 3.8, y: 6.4, z: 6 } },
+            'unit-3A': { name: 'Apartment 3A', floor: 3, price: '€245,000', sqmPrice: '€3,828 / m²', rooms: '2 Bedrooms • 64 m²', area: '64 m²', orient: 'South', date: 'Spring 2027', tourId: '', pos: { x: -3.8, y: 9.2, z: 6 } },
+            'unit-3B': { name: 'Apartment 3B', floor: 3, price: '€278,000', sqmPrice: '€3,657 / m²', rooms: '3 Bedrooms • 76 m²', area: '76 m²', orient: 'East', date: 'Spring 2027', tourId: '', pos: { x: 3.8, y: 9.2, z: 6 } },
+            'unit-4A': { name: 'Apartment 4A', floor: 4, price: '€285,000', sqmPrice: '€4,384 / m²', rooms: '2 Bedrooms • 65 m²', area: '65 m²', orient: 'North-West', date: 'Spring 2027', tourId: '', pos: { x: -3.8, y: 12.0, z: 6 } },
+            'unit-4B': { name: 'Apartment 4B', floor: 4, price: '€299,200', sqmPrice: '€4,675 / m²', rooms: '2 Bedrooms • 64 m²', area: '64 m²', orient: 'South-West', date: 'Spring 2027', tourId: '', pos: { x: 3.8, y: 12.0, z: 6 } },
+            'unit-5A': { name: 'Penthouse 5A', floor: 5, price: '€440,000', sqmPrice: '€4,190 / m²', rooms: '3 Bedrooms • 105 m²', area: '105 m²', orient: 'Panoramic', date: 'Summer 2027', tourId: '', pos: { x: -3.8, y: 14.8, z: 6 } },
+            'unit-5B': { name: 'Penthouse 5B', floor: 5, price: '€480,000', sqmPrice: '€3,870 / m²', rooms: '4 Bedrooms • 124 m²', area: '124 m²', orient: 'Panoramic', date: 'Summer 2027', tourId: '', pos: { x: 3.8, y: 14.8, z: 6 } },
+            'unit-6A': { name: 'Sky Suite 6A', floor: 6, price: '€560,000', sqmPrice: '€3,612 / m²', rooms: 'Luxury Suite • 155 m²', area: '155 m²', orient: '360 View', date: 'Summer 2027', tourId: '', pos: { x: 0, y: 17.6, z: 6 } }
         };
 
         // --- THREE.JS GLOBAL VARIABLES ---
         let scene, camera, renderer, controls;
-        let buildingGroup, interiorGroup, environmentGroup;
+        let buildingGroup, environmentGroup;
         let raycaster, mouse;
         let hoverableMeshList = [];
         let hoveredObject = null;
@@ -481,19 +478,49 @@
         const COLOR_GLASS = 0x5a88a5;
         const COLOR_HIGHLIGHT = 0xe5a93c;
 
-        window.onload = function() {
+        window.onload = async function() {
+            await fetchSupabaseTours();
             initThree();
             setupEvents();
             animate();
             lucide.createIcons();
 
-            // Auto-check URL for tour query parameter
             const urlParams = new URLSearchParams(window.location.search);
             const tourId = urlParams.get('id');
             if (tourId) {
                 loadSupabasePannellumTour(tourId);
             }
         };
+
+        // --- FETCH TOURS & TITLES FROM SUPABASE ---
+        async function fetchSupabaseTours() {
+            try {
+                const { data: tours, error } = await supabaseClient.from('tours').select('*');
+                if (error) throw error;
+                if (tours && tours.length > 0) {
+                    console.log('Loaded Supabase Tours:', tours);
+                    const keys = Object.keys(apartmentData);
+                    tours.forEach((tour, idx) => {
+                        if (keys[idx]) {
+                            const unitKey = keys[idx];
+                            apartmentData[unitKey].tourId = tour.id;
+                            apartmentData[unitKey].name = tour.title || tour.name || tour.project_name || apartmentData[unitKey].name;
+                        }
+                    });
+                    // Fallback remaining units
+                    keys.forEach(key => {
+                        if (!apartmentData[key].tourId && tours[0]) {
+                            apartmentData[key].tourId = tours[0].id;
+                        }
+                    });
+                }
+            } catch (err) {
+                console.warn('Could not fetch tours from Supabase, using defaults:', err);
+                Object.keys(apartmentData).forEach(key => {
+                    apartmentData[key].tourId = 'demo-tour-id';
+                });
+            }
+        }
 
         function initThree() {
             const container = document.getElementById('canvas-container');
@@ -528,16 +555,13 @@
             setupLighting();
 
             buildingGroup = new THREE.Group();
-            interiorGroup = new THREE.Group();
             environmentGroup = new THREE.Group();
 
             scene.add(environmentGroup);
             scene.add(buildingGroup);
-            scene.add(interiorGroup);
 
             buildRealisticUrbanEnvironment();
             buildDetailedGridBuilding();
-            buildIsometricFloorPlan();
         }
 
         function setupLighting() {
@@ -660,11 +684,6 @@
 
                 buildingGroup.add(floorGroup);
             }
-        }
-
-        function buildIsometricFloorPlan() {
-            interiorGroup.position.set(0, -35, 0);
-            interiorGroup.visible = false;
         }
 
         function setupEvents() {
@@ -823,7 +842,7 @@
             closeModal();
         }
 
-        // --- EXACT LOADTOUR FUNCTION FROM INDEX_2.HTML WITH SUPABASE & PANNELLUM ---
+        // --- LAUNCH EXACT SUPABASE PANNELLUM TOUR FOR SELECTED APARTMENT ---
         function launchCurrentApartmentTour() {
             const apt = apartmentData[selectedApartment] || apartmentData['unit-4B'];
             const targetId = apt.tourId || 'demo-tour-id';
@@ -839,7 +858,6 @@
             let projectTitle = '';
             let scenes = [];
 
-            // Attempt Supabase Fetching
             try {
                 const { data: tourData } = await supabaseClient
                     .from('tours')
@@ -861,10 +879,9 @@
                     scenes = fetchedScenes;
                 }
             } catch (err) {
-                console.warn('Supabase query fallback to local demo scenes:', err);
+                console.warn('Supabase fetch notice:', err);
             }
 
-            // High Quality Demo Fallback if database table is empty or tourId not found
             if (!scenes || scenes.length === 0) {
                 scenes = [
                     {
@@ -872,7 +889,7 @@
                         title: 'Living Room Loggia View',
                         panorama_url: 'https://pannellum.org/images/alma.jpg',
                         hotspots: [
-                            { pitch: -5, yaw: 110, label: 'Go to Master Bedroom', target_scene_id: 'demo-bedroom' }
+                            { pitch: -5, yaw: 110, label: 'Master Bedroom', target_scene_id: 'demo-bedroom' }
                         ]
                     },
                     {
@@ -880,22 +897,17 @@
                         title: 'Master Bedroom Suite',
                         panorama_url: 'https://pannellum.org/images/cerro-toco.jpg',
                         hotspots: [
-                            { pitch: 2, yaw: -70, label: 'Back to Living Room', target_scene_id: 'demo-living' }
+                            { pitch: 2, yaw: -70, label: 'Living Room', target_scene_id: 'demo-living' }
                         ]
                     }
                 ];
-                projectTitle = 'Aria Residences Luxury Suite';
-            }
-
-            if (!projectTitle && scenes[0].tour_title) {
-                projectTitle = scenes[0].tour_title;
+                projectTitle = projectTitle || 'Aria Residences Luxury Suite';
             }
 
             if (projectTitle) {
                 document.title = projectTitle;
             }
 
-            // Pre-cache panorama images
             scenes.forEach(scene => {
                 if (scene.panorama_url) {
                     const img = new Image();
@@ -1000,7 +1012,7 @@
                 }
             });
 
-            document.getElementById('tour-title-bar').innerText = scenes[0].title || 'Aria Residence 360° View';
+            document.getElementById('tour-title-bar').innerText = scenes[0].title || projectTitle || 'Aria Residence 360° View';
         }
 
         function closeTourViewer() {
