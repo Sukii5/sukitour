@@ -635,7 +635,7 @@
     const gltfLoader = new THREE.GLTFLoader();
     
     // PASTE YOUR SUPABASE PUBLIC URL FOR THE .glb FILE HERE:
-    const glbUrl = 'https://supabase.com/dashboard/project/pcfdrglvvmlrjzhwuvze/storage/files/buckets/models?preview=Apartment.glb';
+    const glbUrl = 'https://pcfdrglvvmlrjzhwuvze.supabase.co/storage/v1/object/public/models/Apartment.glb';
 
     gltfLoader.load(glbUrl, function (gltf) {
         const object = gltf.scene;
