@@ -38,9 +38,8 @@
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     
-    <!-- THREE.JS LOADED FIRST -->
+    <!-- Three.js & GSAP -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <!-- OrbitControls & GSAP -->
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 
@@ -54,55 +53,178 @@
             --bg-deep: #07090e;
             --glass-bg: rgba(11, 15, 23, 0.72);
             --glass-border: rgba(255, 255, 255, 0.12);
+            --accent-glow: rgba(56, 189, 248, 0.4);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
         }
-        body { font-family: 'Plus Jakarta Sans', sans-serif; overflow-x: hidden; user-select: none; }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            overflow-x: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        /* Custom Scrollbar */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #0f1318; }
         ::-webkit-scrollbar-thumb { background: #2b3544; border-radius: 3px; }
+        
         .glass-panel {
             background: rgba(18, 24, 32, 0.82);
             backdrop-filter: blur(24px);
             -webkit-backdrop-filter: blur(24px);
             border: 1px solid rgba(255, 255, 255, 0.08);
         }
-        .apartment-tooltip { pointer-events: none; transition: opacity 0.15s ease-out, transform 0.15s ease-out; }
-        .pulse-dot { box-shadow: 0 0 0 0 rgba(229, 169, 60, 0.7); animation: pulse 1.8s infinite; }
+
+        .apartment-tooltip {
+            pointer-events: none;
+            transition: opacity 0.15s ease-out, transform 0.15s ease-out;
+        }
+        
+        .pulse-dot {
+            box-shadow: 0 0 0 0 rgba(229, 169, 60, 0.7);
+            animation: pulse 1.8s infinite;
+        }
         @keyframes pulse {
             0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(229, 169, 60, 0.7); }
             70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(229, 169, 60, 0); }
             100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(229, 169, 60, 0); }
         }
+
+        /* --- PANNELLUM CUSTOM HOTSPOT STYLES --- */
         #panorama { width: 100%; height: 100%; }
-        .pnm-info-hotspot { background: none !important; border: none !important; }
-        #tour-title-bar {
-            position: absolute; top: 18px; left: 50%; transform: translateX(-50%);
-            background: var(--glass-bg); color: #fff; padding: 6px 18px; border-radius: 14px;
-            font-size: 11px; font-weight: 600; z-index: 10; border: 1px solid var(--glass-border);
-            backdrop-filter: blur(20px); display: flex; align-items: center; gap: 10px;
+
+        .pnm-hotspot, .pnm-tooltip, .hotspot, * {
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
         }
+
+        .pnm-info-hotspot {
+            background: none !important;
+            background-image: none !important;
+            border: none !important;
+            box-shadow: none !important;
+            width: auto !important;
+            height: auto !important;
+        }
+        .pnm-info-hotspot::after { display: none !important; }
+
+        .pnm-info-hotspot:focus, .pnm-info-hotspot:active {
+            background-color: transparent !important;
+            outline: none !important;
+            box-shadow: none !important;
+        }
+
+        @keyframes floatBounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+
+        @keyframes pulseRing {
+            0% { transform: scale(0.92); box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.5); }
+            70% { transform: scale(1.04); box-shadow: 0 0 0 12px rgba(56, 189, 248, 0); }
+            100% { transform: scale(0.92); box-shadow: 0 0 0 0 rgba(56, 189, 248, 0); }
+        }
+
+        .pnm-title, .pnm-scene-title, .pnm-scene-information, .pnm-load-box,
+        div.pnm-title, div.pnm-scene-title, span.pnm-scene-title,
+        div[class*="pnm-title"], div[class*="scene-title"] {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+        }
+
+        #transition-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: var(--bg-deep);
+            opacity: 0; pointer-events: none;
+            transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 99;
+        }
+
+        .custom-arrow-container {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            animation: floatBounce 3s ease-in-out infinite;
+            filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.5));
+            transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .custom-arrow-container:hover { transform: scale(1.12) translateY(-4px); }
+
+        .custom-arrow-icon {
+            width: 30px; height: 30px; border-radius: 50%;
+            background-size: cover; background-repeat: no-repeat; background-position: center;
+            border: 2px solid rgba(255, 255, 255, 0.9);
+            animation: pulseRing 2.4s infinite cubic-bezier(0.4, 0, 0.6, 1);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+        }
+
+        .custom-arrow-label {
+            margin-top: 6px;
+            background: var(--glass-bg) !important;
+            color: var(--text-primary);
+            font-size: 9px; font-weight: 500; letter-spacing: 0.3px;
+            padding: 4px 10px; border-radius: 18px;
+            border: 1px solid var(--glass-border);
+            white-space: nowrap;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+            pointer-events: none;
+        }
+
+        #tour-title-bar {
+            position: absolute;
+            top: 18px; left: 50%;
+            transform: translateX(-50%);
+            background: var(--glass-bg);
+            color: var(--text-primary);
+            padding: 6px 18px; border-radius: 14px;
+            font-size: 11px; font-weight: 600; letter-spacing: 0.4px;
+            z-index: 10;
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+            display: flex; align-items: center; gap: 10px;
+            transition: all 0.3s ease;
+        }
+
         #tour-title-bar::before {
-            content: ''; width: 7px; height: 7px; border-radius: 50%; background-color: #38bdf8; box-shadow: 0 0 10px #38bdf8;
+            content: ''; display: inline-block;
+            width: 7px; height: 7px; border-radius: 50%;
+            background-color: #38bdf8; box-shadow: 0 0 10px #38bdf8;
         }
     </style>
 </head>
-<body class="bg-[#0b0e12] text-slate-100 dark min-h-screen relative overflow-hidden">
+<body class="bg-[#0b0e12] text-slate-100 dark transition-colors duration-300 min-h-screen relative overflow-hidden">
 
-    <!-- 3D CANVAS CONTAINER -->
+    <!-- 3D EXTERIOR CANVAS CONTAINER -->
     <div id="canvas-container" class="absolute inset-0 w-full h-full z-0 cursor-grab active:cursor-grabbing"></div>
 
-    <!-- 360° TOUR OVERLAY -->
+    <!-- 360° PANNELLUM TOUR OVERLAY -->
     <div id="tour-view-overlay" class="fixed inset-0 z-30 bg-[#07090e] opacity-0 pointer-events-none transition-opacity duration-500">
         <div id="tour-title-bar">Loading Virtual Tour...</div>
+        <div id="transition-overlay"></div>
         <div id="panorama"></div>
+
+        <!-- Back to Exterior 3D Model Floating Button -->
         <button onclick="closeTourViewer()" class="absolute bottom-6 left-1/2 -translate-x-1/2 z-50 glass-panel hover:bg-white/10 text-white px-6 py-3 rounded-full text-xs font-bold uppercase tracking-wider flex items-center space-x-2 transition shadow-2xl border border-white/20">
             <i data-lucide="building" class="w-4 h-4 text-brand-gold"></i>
             <span>Exit 360° Tour to Building View</span>
         </button>
     </div>
 
-    <!-- UI OVERLAY -->
+    <!-- MAIN EXTERIOR UI OVERLAY -->
     <div id="ui-overlay" class="relative z-10 flex flex-col justify-between min-h-screen pointer-events-none p-4 md:p-8">
         
+        <!-- HEADER / NAVIGATION -->
         <header class="w-full flex items-center justify-between pointer-events-auto">
             <div class="flex items-center space-x-3 cursor-pointer" onclick="resetView()">
                 <div class="w-10 h-10 rounded-xl bg-brand-gold flex items-center justify-center text-slate-950 font-bold text-xl shadow-lg shadow-brand-gold/20">A</div>
@@ -113,10 +235,10 @@
             </div>
 
             <nav class="hidden md:flex items-center space-x-1 glass-panel px-5 py-2 rounded-full text-xs font-semibold text-slate-300">
-                <button onclick="resetView()" class="px-4 py-1.5 rounded-full text-white bg-white/10">Overview</button>
-                <button onclick="filterFloors('apartments')" class="px-4 py-1.5 rounded-full hover:text-white transition">Apartments</button>
-                <button onclick="filterFloors('penthouses')" class="px-4 py-1.5 rounded-full hover:text-white transition">Penthouses</button>
-                <button onclick="openModal()" class="px-4 py-1.5 rounded-full hover:text-white transition">Contact</button>
+                <button onclick="resetView()" class="px-4 py-1.5 rounded-full text-white bg-white/10" id="nav-all">Overview</button>
+                <button onclick="filterFloors('apartments')" class="px-4 py-1.5 rounded-full hover:text-white transition hover:bg-white/5" id="nav-apts">Apartments</button>
+                <button onclick="filterFloors('penthouses')" class="px-4 py-1.5 rounded-full hover:text-white transition hover:bg-white/5" id="nav-pent">Penthouses</button>
+                <button onclick="openModal('contact')" class="px-4 py-1.5 rounded-full hover:text-white transition hover:bg-white/5">Contact</button>
             </nav>
 
             <div class="flex items-center space-x-3">
@@ -124,8 +246,17 @@
                     <i data-lucide="phone" class="w-3.5 h-3.5 text-brand-gold"></i>
                     <span>+12 345 678 910</span>
                 </a>
-                <button onclick="toggleLighting()" class="w-10 h-10 rounded-full glass-panel flex items-center justify-center hover:bg-white/10 transition text-brand-gold">
-                    <i data-lucide="sun" class="w-5 h-5"></i>
+
+                <button onclick="openModal('booking')" class="hidden lg:flex items-center space-x-2 text-xs font-bold px-5 py-2.5 rounded-full bg-brand-gold hover:bg-brand-goldHover text-slate-950 transition shadow-lg shadow-brand-gold/20">
+                    <span>BOOK A VISIT</span>
+                </button>
+
+                <button onclick="toggleBgPanel()" title="Customize Background" class="w-10 h-10 rounded-full glass-panel flex items-center justify-center hover:bg-white/10 transition text-brand-gold">
+                    <i data-lucide="palette" class="w-5 h-5"></i>
+                </button>
+
+                <button id="theme-toggle" onclick="toggleLighting()" title="Toggle Day/Night Mode" class="w-10 h-10 rounded-full glass-panel flex items-center justify-center hover:bg-white/10 transition text-brand-gold">
+                    <i data-lucide="sun" id="theme-icon" class="w-5 h-5"></i>
                 </button>
             </div>
         </header>
@@ -134,14 +265,15 @@
         <div id="hero-banner" class="max-w-xl transition-all duration-500 my-auto pointer-events-auto">
             <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-brand-gold/10 border border-brand-gold/30 text-brand-gold text-xs font-semibold mb-4">
                 <span class="w-2 h-2 rounded-full bg-brand-gold pulse-dot"></span>
-                <span>Now Selling Phase II • Procedural Architecture</span>
+                <span>Now Selling Phase II • Modern Living</span>
             </div>
             <h1 class="text-4xl md:text-6xl font-extrabold tracking-tight text-white mb-4 leading-tight">
                 Find your <br><span class="text-transparent bg-clip-text bg-gradient-to-r from-brand-gold via-amber-300 to-amber-500">home in Aria.</span>
             </h1>
             <p class="text-slate-300 text-sm md:text-base mb-6 leading-relaxed max-w-md">
-                Fully procedural 3D architecture featuring clean balconies, modern facades, and instant database-connected 360° virtual tours.
+                Architectural luxury featuring timber loggia balconies, low-E triple glazing, and direct high-definition 360° virtual tours.
             </p>
+
             <div class="flex flex-wrap items-center gap-3">
                 <button onclick="focusRandomApartment()" class="px-6 py-3.5 bg-brand-gold hover:bg-brand-goldHover text-slate-950 font-bold rounded-xl text-xs tracking-wide uppercase transition shadow-lg shadow-brand-gold/20 flex items-center space-x-2">
                     <span>Explore Available Units</span>
@@ -154,13 +286,13 @@
             </div>
         </div>
 
-        <!-- DETAIL DRAWER -->
+        <!-- DETAILED APARTMENT SPEC DRAWER -->
         <div id="detail-panel" class="fixed right-4 md:right-8 top-24 bottom-8 w-full max-w-md glass-panel rounded-3xl p-6 shadow-2xl flex flex-col justify-between transition-all duration-500 transform translate-x-[120%] pointer-events-auto overflow-y-auto z-40">
             <div>
                 <div class="flex items-center justify-between mb-4 border-b border-slate-800 pb-4">
                     <div>
                         <span class="text-xs uppercase tracking-wider font-semibold text-brand-gold font-mono" id="apt-category">2 Bedrooms • 64 m²</span>
-                        <h2 class="text-2xl font-extrabold text-white" id="apt-title">Apartment Suite</h2>
+                        <h2 class="text-3xl font-extrabold text-white" id="apt-title">Apartment 4B</h2>
                     </div>
                     <button onclick="closeApartmentDetail()" class="w-9 h-9 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-white transition">
                         <i data-lucide="x" class="w-5 h-5"></i>
@@ -179,14 +311,35 @@
                 <div class="grid grid-cols-2 gap-3 mb-6">
                     <div class="bg-slate-900/50 p-3 rounded-xl border border-slate-800/80">
                         <span class="text-[11px] text-slate-400 block">Total Area</span>
-                        <span class="text-sm font-bold text-white mt-0.5 block" id="apt-area">64 m²</span>
+                        <span class="text-sm font-bold text-white flex items-center space-x-1.5 mt-0.5">
+                            <i data-lucide="maximize-2" class="w-3.5 h-3.5 text-brand-gold"></i>
+                            <span id="apt-area">64 m²</span>
+                        </span>
                     </div>
                     <div class="bg-slate-900/50 p-3 rounded-xl border border-slate-800/80">
                         <span class="text-[11px] text-slate-400 block">Floor</span>
-                        <span class="text-sm font-bold text-white mt-0.5 block" id="apt-floor">4th floor</span>
+                        <span class="text-sm font-bold text-white flex items-center space-x-1.5 mt-0.5">
+                            <i data-lucide="layers" class="w-3.5 h-3.5 text-brand-gold"></i>
+                            <span id="apt-floor">4th floor</span>
+                        </span>
+                    </div>
+                    <div class="bg-slate-900/50 p-3 rounded-xl border border-slate-800/80">
+                        <span class="text-[11px] text-slate-400 block">Orientation</span>
+                        <span class="text-sm font-bold text-white flex items-center space-x-1.5 mt-0.5">
+                            <i data-lucide="compass" class="w-3.5 h-3.5 text-brand-gold"></i>
+                            <span id="apt-orient">South-West</span>
+                        </span>
+                    </div>
+                    <div class="bg-slate-900/50 p-3 rounded-xl border border-slate-800/80">
+                        <span class="text-[11px] text-slate-400 block">Delivery Date</span>
+                        <span class="text-sm font-bold text-white flex items-center space-x-1.5 mt-0.5">
+                            <i data-lucide="calendar" class="w-3.5 h-3.5 text-brand-gold"></i>
+                            <span id="apt-date">Spring 2027</span>
+                        </span>
                     </div>
                 </div>
 
+                <!-- DIRECT PANNELLUM SUPABASE 360 TOUR LAUNCHER BUTTON -->
                 <div class="mb-6">
                     <button onclick="launchCurrentApartmentTour()" class="w-full py-4 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-extrabold rounded-2xl text-sm uppercase tracking-wider transition shadow-xl shadow-sky-500/25 flex items-center justify-center space-x-2.5">
                         <i data-lucide="eye" class="w-5 h-5 animate-pulse"></i>
@@ -195,188 +348,341 @@
                 </div>
             </div>
 
-            <button onclick="resetView()" class="w-full py-2.5 bg-slate-800/80 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl transition">
-                Back to Exterior View
-            </button>
+            <div class="pt-4 border-t border-slate-800 space-y-2">
+                <button onclick="openModal('booking')" class="w-full py-3.5 bg-brand-gold hover:bg-brand-goldHover text-slate-950 font-bold rounded-xl text-xs uppercase tracking-wider transition shadow-lg shadow-brand-gold/20 flex items-center justify-center space-x-2">
+                    <i data-lucide="calendar" class="w-4 h-4"></i>
+                    <span>Book a Viewing</span>
+                </button>
+                <button onclick="resetView()" class="w-full py-2.5 bg-slate-800/80 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl transition">
+                    Back to Exterior View
+                </button>
+            </div>
+        </div>
+
+        <!-- BACKGROUND CUSTOMIZER DRAWER -->
+        <div id="bg-panel" class="fixed left-4 md:left-8 top-24 w-full max-w-sm glass-panel rounded-3xl p-6 shadow-2xl transition-all duration-500 transform -translate-x-[120%] pointer-events-auto z-40 max-h-[80vh] overflow-y-auto">
+            <div class="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
+                <div class="flex items-center space-x-2">
+                    <i data-lucide="image" class="w-4 h-4 text-brand-gold"></i>
+                    <h3 class="text-base font-bold text-white">Background Scene</h3>
+                </div>
+                <button onclick="toggleBgPanel()" class="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-white transition">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+            <div class="mb-5 bg-slate-900/60 p-3 rounded-2xl border border-slate-800 flex items-center justify-between">
+                <div>
+                    <span class="text-xs font-semibold text-white block">3D Urban Environment</span>
+                    <span class="text-[10px] text-slate-400">Roads, trees & surrounding buildings</span>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="toggle-env-mesh" checked onchange="toggleEnvironmentMesh(this.checked)" class="sr-only peer">
+                    <div class="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-brand-gold"></div>
+                </label>
+            </div>
         </div>
 
         <!-- BOTTOM TOOLBAR -->
-        <div id="bottom-controls" class="w-full flex items-center justify-between gap-4 pointer-events-auto">
+        <div id="bottom-controls" class="w-full flex flex-col md:flex-row items-center justify-between gap-4 pointer-events-auto">
             <div class="flex items-center space-x-2 text-xs text-slate-300 glass-panel px-4 py-2 rounded-full">
                 <i data-lucide="mouse-pointer-click" class="w-4 h-4 text-brand-gold animate-pulse"></i>
-                <span>Click any apartment unit on the building facade to launch its tour</span>
+                <span>Click any apartment window to open specs and launch 360° tour</span>
+            </div>
+
+            <div class="glass-panel px-3 py-1.5 rounded-full flex items-center space-x-1 text-xs font-semibold text-slate-300">
+                <span class="text-slate-500 text-[10px] uppercase px-2 font-mono">Floors:</span>
+                <button onclick="selectFloorLevel(1)" class="w-7 h-7 rounded-full hover:bg-white/10 transition flex items-center justify-center floor-btn" data-floor="1">01</button>
+                <button onclick="selectFloorLevel(2)" class="w-7 h-7 rounded-full hover:bg-white/10 transition flex items-center justify-center floor-btn" data-floor="2">02</button>
+                <button onclick="selectFloorLevel(3)" class="w-7 h-7 rounded-full hover:bg-white/10 transition flex items-center justify-center floor-btn" data-floor="3">03</button>
+                <button onclick="selectFloorLevel(4)" class="w-7 h-7 rounded-full hover:bg-white/10 transition flex items-center justify-center floor-btn" data-floor="4">04</button>
+                <button onclick="selectFloorLevel(5)" class="w-7 h-7 rounded-full hover:bg-white/10 transition flex items-center justify-center floor-btn" data-floor="5">05</button>
+                <button onclick="selectFloorLevel(6)" class="w-7 h-7 rounded-full hover:bg-white/10 transition flex items-center justify-center floor-btn" data-floor="6">06</button>
             </div>
         </div>
     </div>
 
-    <!-- HOVER TOOLTIP -->
+    <!-- HOVER TOOLTIP POPUP -->
     <div id="hover-tooltip" class="apartment-tooltip fixed top-0 left-0 glass-panel px-3.5 py-2.5 rounded-2xl shadow-2xl flex items-center space-x-3 opacity-0 z-50 pointer-events-none transform -translate-x-1/2 -translate-y-full mb-3 border border-brand-gold/50">
         <div class="w-2.5 h-2.5 rounded-full bg-brand-gold pulse-dot"></div>
         <div>
-            <div class="text-xs font-extrabold text-white leading-none" id="tooltip-title">Loading...</div>
-            <div class="text-[10px] text-brand-gold font-bold mt-1" id="tooltip-sub">Supabase Tour Project</div>
+            <div class="text-xs font-extrabold text-white leading-none" id="tooltip-title">Apartment 4B</div>
+            <div class="text-[10px] text-brand-gold font-bold mt-1" id="tooltip-sub">2 Bedrooms • €299,200</div>
+        </div>
+    </div>
+
+    <!-- MODAL POPUP -->
+    <div id="modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="glass-panel w-full max-w-lg rounded-3xl p-6 md:p-8 shadow-2xl border border-slate-700 relative transform scale-95 transition-transform duration-300" id="modal-card">
+            <button onclick="closeModal()" class="absolute top-6 right-6 w-8 h-8 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+
+            <div id="modal-contact-content">
+                <div class="flex items-center space-x-3 mb-4">
+                    <div class="w-10 h-10 rounded-xl bg-brand-gold/20 border border-brand-gold/30 flex items-center justify-center text-brand-gold">
+                        <i data-lucide="calendar" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold text-white">Book a Viewing</h3>
+                        <p class="text-xs text-slate-400">Schedule an appointment with our Aria sales team</p>
+                    </div>
+                </div>
+
+                <form onsubmit="handleFormSubmit(event)" class="space-y-4">
+                    <div>
+                        <label class="text-xs font-medium text-slate-300 block mb-1">Full Name</label>
+                        <input type="text" required placeholder="Alexander Wright" class="w-full bg-slate-900/80 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-brand-gold transition">
+                    </div>
+                    <button type="submit" class="w-full py-3.5 bg-brand-gold hover:bg-brand-goldHover text-slate-950 font-bold rounded-xl text-xs uppercase tracking-wider transition shadow-lg shadow-brand-gold/20 mt-2">
+                        Confirm Appointment
+                    </button>
+                </form>
+            </div>
         </div>
     </div>
 
     <script>
+        // --- SUPABASE CONFIGURATION FROM INDEX_2.HTML ---
         const SUPABASE_URL = 'https://pcfdrglvvmlrjzhwuvze.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_btfQ4JKEiDvRm89qO8TZFg_n1rBqVGz';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+        // --- APARTMENT DATA MAP & TOUR ID LINKING ---
         const apartmentData = {
-            'unit-1A': { name: 'Apartment 1A', floor: 1, price: '€215,000', sqmPrice: '€4,479 / m²', rooms: '1 Bedroom • 48 m²', area: '48 m²', orient: 'South', tourId: '', pos: { x: -2.2, y: 3.5, z: 0.1 } },
-            'unit-1B': { name: 'Apartment 1B', floor: 1, price: '€242,000', sqmPrice: '€4,033 / m²', rooms: '2 Bedrooms • 60 m²', area: '60 m²', orient: 'South-East', tourId: '', pos: { x: 2.2, y: 3.5, z: 0.1 } },
-            'unit-2A': { name: 'Apartment 2A', floor: 2, price: '€238,000', sqmPrice: '€4,103 / m²', rooms: '2 Bedrooms • 58 m²', area: '58 m²', orient: 'West', tourId: '', pos: { x: -2.2, y: 6.5, z: 0.1 } },
-            'unit-2B': { name: 'Apartment 2B', floor: 2, price: '€262,000', sqmPrice: '€4,030 / m²', rooms: '2 Bedrooms • 65 m²', area: '65 m²', orient: 'South-West', tourId: '', pos: { x: 2.2, y: 6.5, z: 0.1 } },
-            'unit-3A': { name: 'Apartment 3A', floor: 3, price: '€245,000', sqmPrice: '€3,828 / m²', rooms: '2 Bedrooms • 64 m²', area: '64 m²', orient: 'South', tourId: '', pos: { x: -2.2, y: 9.5, z: 0.1 } },
-            'unit-3B': { name: 'Apartment 3B', floor: 3, price: '€278,000', sqmPrice: '€3,657 / m²', rooms: '3 Bedrooms • 76 m²', area: '76 m²', orient: 'East', tourId: '', pos: { x: 2.2, y: 9.5, z: 0.1 } },
-            'unit-4A': { name: 'Apartment 4A', floor: 4, price: '€285,000', sqmPrice: '€4,384 / m²', rooms: '2 Bedrooms • 65 m²', area: '65 m²', orient: 'North-West', tourId: '', pos: { x: -2.2, y: 12.5, z: 0.1 } },
-            'unit-4B': { name: 'Apartment 4B', floor: 4, price: '€299,200', sqmPrice: '€4,675 / m²', rooms: '2 Bedrooms • 64 m²', area: '64 m²', orient: 'South-West', tourId: '', pos: { x: 2.2, y: 12.5, z: 0.1 } },
-            'unit-5A': { name: 'Penthouse 5A', floor: 5, price: '€440,000', sqmPrice: '€4,190 / m²', rooms: '3 Bedrooms • 105 m²', area: '105 m²', orient: 'Panoramic', tourId: '', pos: { x: 0, y: 15.5, z: 0.1 } }
+            'unit-1A': { name: 'Apartment 1A', floor: 1, price: '€215,000', sqmPrice: '€4,479 / m²', rooms: '1 Bedroom • 48 m²', area: '48 m²', orient: 'South', date: 'Autumn 2026', tourId: 'demo-tour-id', pos: { x: -3.8, y: 3.6, z: 6 } },
+            'unit-1B': { name: 'Apartment 1B', floor: 1, price: '€242,000', sqmPrice: '€4,033 / m²', rooms: '2 Bedrooms • 60 m²', area: '60 m²', orient: 'South-East', date: 'Autumn 2026', tourId: 'demo-tour-id', pos: { x: 3.8, y: 3.6, z: 6 } },
+            'unit-2A': { name: 'Apartment 2A', floor: 2, price: '€238,000', sqmPrice: '€4,103 / m²', rooms: '2 Bedrooms • 58 m²', area: '58 m²', orient: 'West', date: 'Winter 2026', tourId: 'demo-tour-id', pos: { x: -3.8, y: 6.4, z: 6 } },
+            'unit-2B': { name: 'Apartment 2B', floor: 2, price: '€262,000', sqmPrice: '€4,030 / m²', rooms: '2 Bedrooms • 65 m²', area: '65 m²', orient: 'South-West', date: 'Winter 2026', tourId: 'demo-tour-id', pos: { x: 3.8, y: 6.4, z: 6 } },
+            'unit-3A': { name: 'Apartment 3A', floor: 3, price: '€245,000', sqmPrice: '€3,828 / m²', rooms: '2 Bedrooms • 64 m²', area: '64 m²', orient: 'South', date: 'Spring 2027', tourId: 'demo-tour-id', pos: { x: -3.8, y: 9.2, z: 6 } },
+            'unit-3B': { name: 'Apartment 3B', floor: 3, price: '€278,000', sqmPrice: '€3,657 / m²', rooms: '3 Bedrooms • 76 m²', area: '76 m²', orient: 'East', date: 'Spring 2027', tourId: 'demo-tour-id', pos: { x: 3.8, y: 9.2, z: 6 } },
+            'unit-4A': { name: 'Apartment 4A', floor: 4, price: '€285,000', sqmPrice: '€4,384 / m²', rooms: '2 Bedrooms • 65 m²', area: '65 m²', orient: 'North-West', date: 'Spring 2027', tourId: 'demo-tour-id', pos: { x: -3.8, y: 12.0, z: 6 } },
+            'unit-4B': { name: 'Apartment 4B', floor: 4, price: '€299,200', sqmPrice: '€4,675 / m²', rooms: '2 Bedrooms • 64 m²', area: '64 m²', orient: 'South-West', date: 'Spring 2027', tourId: 'demo-tour-id', pos: { x: 3.8, y: 12.0, z: 6 } },
+            'unit-5A': { name: 'Penthouse 5A', floor: 5, price: '€440,000', sqmPrice: '€4,190 / m²', rooms: '3 Bedrooms • 105 m²', area: '105 m²', orient: 'Panoramic', date: 'Summer 2027', tourId: 'demo-tour-id', pos: { x: -3.8, y: 14.8, z: 6 } },
+            'unit-5B': { name: 'Penthouse 5B', floor: 5, price: '€480,000', sqmPrice: '€3,870 / m²', rooms: '4 Bedrooms • 124 m²', area: '124 m²', orient: 'Panoramic', date: 'Summer 2027', tourId: 'demo-tour-id', pos: { x: 3.8, y: 14.8, z: 6 } },
+            'unit-6A': { name: 'Sky Suite 6A', floor: 6, price: '€560,000', sqmPrice: '€3,612 / m²', rooms: 'Luxury Suite • 155 m²', area: '155 m²', orient: '360 View', date: 'Summer 2027', tourId: 'demo-tour-id', pos: { x: 0, y: 17.6, z: 6 } }
         };
 
+        // --- THREE.JS GLOBAL VARIABLES ---
         let scene, camera, renderer, controls;
-        let buildingGroup, environmentGroup;
+        let buildingGroup, interiorGroup, environmentGroup;
         let raycaster, mouse;
         let hoverableMeshList = [];
         let hoveredObject = null;
         let selectedApartment = null;
+        let isLightingDay = false;
+        
+        const defaultCamPos = { x: 28, y: 18, z: 30 };
+        const defaultTarget = { x: 0, y: 8, z: 0 };
 
-        window.onload = async function() {
-            await fetchSupabaseTours();
+        const COLOR_CONCRETE = 0xded9d0;
+        const COLOR_TIMBER = 0xab7d4d;
+        const COLOR_DARK_METAL = 0x1d222a;
+        const COLOR_GLASS = 0x5a88a5;
+        const COLOR_HIGHLIGHT = 0xe5a93c;
+
+        window.onload = function() {
             initThree();
             setupEvents();
             animate();
             lucide.createIcons();
-        };
 
-        async function fetchSupabaseTours() {
-            try {
-                const { data: tours } = await supabaseClient.from('tours').select('*');
-                if (tours && tours.length > 0) {
-                    const keys = Object.keys(apartmentData);
-                    tours.forEach((tour, idx) => {
-                        if (keys[idx]) apartmentData[keys[idx]].tourId = tour.id;
-                    });
-                }
-            } catch (err) {
-                Object.keys(apartmentData).forEach(k => apartmentData[k].tourId = 'demo-tour');
+            // Auto-check URL for tour query parameter
+            const urlParams = new URLSearchParams(window.location.search);
+            const tourId = urlParams.get('id');
+            if (tourId) {
+                loadSupabasePannellumTour(tourId);
             }
-        }
+        };
 
         function initThree() {
             const container = document.getElementById('canvas-container');
 
             scene = new THREE.Scene();
             scene.background = new THREE.Color('#0b0e12');
-            scene.fog = new THREE.FogExp2('#0b0e12', 0.012);
+            scene.fog = new THREE.FogExp2('#0b0e12', 0.01);
 
             camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(22, 12, 28);
+            camera.position.set(defaultCamPos.x, defaultCamPos.y, defaultCamPos.z);
 
-            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
             renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.1;
             container.appendChild(renderer.domElement);
 
             controls = new THREE.OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true;
-            controls.dampingFactor = 0.05;
-            controls.maxPolarAngle = Math.PI / 2 - 0.02;
-            controls.target.set(0, 8, 0);
+            controls.dampingFactor = 0.04;
+            controls.maxPolarAngle = Math.PI / 2 - 0.01;
+            controls.minDistance = 6;
+            controls.maxDistance = 80;
+            controls.target.set(defaultTarget.x, defaultTarget.y, defaultTarget.z);
 
             raycaster = new THREE.Raycaster();
             mouse = new THREE.Vector2();
 
-            // Lighting
-            const ambient = new THREE.AmbientLight(0xcce0ff, 0.6);
-            scene.add(ambient);
-
-            const sun = new THREE.DirectionalLight(0xfff7e6, 1.8);
-            sun.position.set(25, 40, 25);
-            sun.castShadow = true;
-            scene.add(sun);
+            setupLighting();
 
             buildingGroup = new THREE.Group();
+            interiorGroup = new THREE.Group();
             environmentGroup = new THREE.Group();
+
             scene.add(environmentGroup);
             scene.add(buildingGroup);
+            scene.add(interiorGroup);
 
-            buildEnvironment();
-            buildProceduralBuilding();
+            buildRealisticUrbanEnvironment();
+            buildDetailedGridBuilding();
+            buildIsometricFloorPlan();
         }
 
-        function buildEnvironment() {
-            const ground = new THREE.Mesh(
-                new THREE.PlaneGeometry(150, 150),
-                new THREE.MeshStandardMaterial({ color: 0x12171d, roughness: 0.9 })
-            );
+        function setupLighting() {
+            const ambient = new THREE.AmbientLight(0xcce0ff, 0.55);
+            ambient.name = 'ambient';
+            scene.add(ambient);
+
+            const sunLight = new THREE.DirectionalLight(0xfff7e6, 1.8);
+            sunLight.position.set(30, 50, 35);
+            sunLight.castShadow = true;
+            sunLight.shadow.mapSize.width = 2048;
+            sunLight.shadow.mapSize.height = 2048;
+            sunLight.shadow.bias = -0.0001;
+            sunLight.name = 'sun';
+            scene.add(sunLight);
+
+            const hemiLight = new THREE.HemisphereLight(0xddeeff, 0x111822, 0.4);
+            scene.add(hemiLight);
+        }
+
+        function buildRealisticUrbanEnvironment() {
+            const groundGeo = new THREE.PlaneGeometry(180, 180);
+            const groundMat = new THREE.MeshStandardMaterial({ color: 0x12171d, roughness: 0.95 });
+            const ground = new THREE.Mesh(groundGeo, groundMat);
             ground.rotation.x = -Math.PI / 2;
-            ground.position.y = -0.1;
+            ground.position.y = -0.05;
+            ground.receiveShadow = true;
             environmentGroup.add(ground);
+
+            const roadGeo = new THREE.PlaneGeometry(20, 180);
+            const roadMat = new THREE.MeshStandardMaterial({ color: 0x0a0d11, roughness: 0.85 });
+            const road = new THREE.Mesh(roadGeo, roadMat);
+            road.rotation.x = -Math.PI / 2;
+            road.position.set(22, 0, 0);
+            road.receiveShadow = true;
+            environmentGroup.add(road);
+
+            for (let i = -70; i <= 70; i += 14) {
+                const tree = createDetailed3DTree();
+                tree.position.set(10.2, 0.2, i + (Math.random() * 2));
+                environmentGroup.add(tree);
+            }
         }
 
-        // --- GENERATE CLEAN PROCEDURAL 3D BUILDING & WINDOW CLICK TARGETS ---
-        function buildProceduralBuilding() {
-            // Main structure core
-            const coreMat = new THREE.MeshStandardMaterial({ color: 0x1e2530, roughness: 0.45 });
-            const buildingCore = new THREE.Mesh(new THREE.BoxGeometry(9.2, 16, 6.2), coreMat);
-            buildingCore.position.y = 8;
-            buildingCore.castShadow = true;
-            buildingCore.receiveShadow = true;
-            buildingGroup.add(buildingCore);
+        function createDetailed3DTree() {
+            const tree = new THREE.Group();
+            const trunkGeo = new THREE.CylinderGeometry(0.2, 0.32, 2.6, 8);
+            const trunkMat = new THREE.MeshStandardMaterial({ color: 0x3b281c, roughness: 0.9 });
+            const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+            trunk.position.y = 1.3;
+            trunk.castShadow = true;
+            tree.add(trunk);
 
-            // Floors & Balconies
-            const floorHeight = 3.0;
-            const glassMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.1, transparent: true, opacity: 0.6 });
-            const frameMat = new THREE.MeshStandardMaterial({ color: 0xdde3ea, roughness: 0.2 });
-
-            Object.keys(apartmentData).forEach((unitId) => {
-                const data = apartmentData[unitId];
-                const fIndex = data.floor;
-                const yPos = fIndex * floorHeight - 1.2;
-
-                // Balcony slab
-                const balcony = new THREE.Mesh(new BoxGeometryIfNeeded(9.6, 0.25, 2.2), frameMat);
-                balcony.position.set(0, yPos - 0.2, 3.2);
-                buildingGroup.add(balcony);
-
-                // Glass railing
-                const railing = new THREE.Mesh(new THREE.BoxGeometry(9.4, 0.9, 0.1), glassMat);
-                railing.position.set(0, yPos + 0.35, 4.2);
-                buildingGroup.add(railing);
-
-                // Clickable Window Panel (Invisible Hit-box mapped to exact unit position)
-                const hitGeo = new THREE.BoxGeometry(data.floor === 5 ? 8.2 : 3.8, 2.2, 0.4);
-                const hitMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.0 });
-                const windowMesh = new THREE.Mesh(hitGeo, hitMat);
-                
-                windowMesh.position.set(data.pos.x, yPos + 1.0, 3.0);
-                windowMesh.userData = { unitId: unitId, name: data.name, defaultColor: 0xffffff };
-
-                hoverableMeshList.push(windowMesh);
-                buildingGroup.add(windowMesh);
-            });
+            const colors = [0x27452e, 0x33593c, 0x213b27];
+            for (let layer = 0; layer < 4; layer++) {
+                const folGeo = new THREE.DodecahedronGeometry(1.4 - layer * 0.2, 1);
+                const folMat = new THREE.MeshStandardMaterial({ color: colors[layer % 3], roughness: 0.85, flatShading: true });
+                const foliage = new THREE.Mesh(folGeo, folMat);
+                foliage.position.y = 2.6 + layer * 0.85;
+                foliage.castShadow = true;
+                tree.add(foliage);
+            }
+            return tree;
         }
 
-        function BoxGeometryIfNeeded(w, h, d) {
-            return new THREE.BoxGeometry(w, h, d);
+        function buildDetailedGridBuilding() {
+            const floorCount = 6;
+            const floorHeight = 2.8;
+            const bWidth = 15;
+            const bDepth = 12.5;
+
+            const gfGroup = new THREE.Group();
+            const gfCore = new THREE.Mesh(
+                new THREE.BoxGeometry(bWidth - 0.4, 2.8, bDepth - 0.4),
+                new THREE.MeshStandardMaterial({ color: 0x141a22, roughness: 0.6 })
+            );
+            gfCore.position.set(0, 1.4, 0);
+            gfGroup.add(gfCore);
+            buildingGroup.add(gfGroup);
+
+            for (let f = 1; f <= floorCount; f++) {
+                const floorY = f * floorHeight;
+                const floorGroup = new THREE.Group();
+
+                const slab = new THREE.Mesh(
+                    new THREE.BoxGeometry(bWidth + 0.6, 0.4, bDepth + 0.6),
+                    new THREE.MeshStandardMaterial({ color: COLOR_CONCRETE, roughness: 0.35 })
+                );
+                slab.position.set(0, floorY, 0);
+                slab.castShadow = true;
+                floorGroup.add(slab);
+
+                const units = [
+                    { id: `unit-${f}A`, side: -3.8, name: `Apartment ${f}A` },
+                    { id: `unit-${f}B`, side: 3.8, name: `Apartment ${f}B` }
+                ];
+
+                units.forEach(u => {
+                    const windowMesh = new THREE.Mesh(
+                        new THREE.BoxGeometry(5.2, 2.2, 0.15),
+                        new THREE.MeshPhysicalMaterial({
+                            color: COLOR_GLASS,
+                            transmission: 0.72,
+                            opacity: 0.95,
+                            transparent: true,
+                            roughness: 0.1
+                        })
+                    );
+                    windowMesh.position.set(u.side, floorY + 1.35, bDepth / 2 + 0.08);
+                    windowMesh.userData = {
+                        unitId: u.id,
+                        floor: f,
+                        name: u.name,
+                        defaultColor: COLOR_GLASS
+                    };
+
+                    hoverableMeshList.push(windowMesh);
+                    floorGroup.add(windowMesh);
+                });
+
+                buildingGroup.add(floorGroup);
+            }
+        }
+
+        function buildIsometricFloorPlan() {
+            interiorGroup.position.set(0, -35, 0);
+            interiorGroup.visible = false;
         }
 
         function setupEvents() {
-            window.addEventListener('resize', () => {
-                camera.aspect = window.innerWidth / window.innerHeight;
-                camera.updateProjectionMatrix();
-                renderer.setSize(window.innerWidth, window.innerHeight);
-            });
+            window.addEventListener('resize', onWindowResize);
             window.addEventListener('pointermove', onPointerMove);
             window.addEventListener('click', onPointerClick);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
         }
 
         function onPointerMove(event) {
             mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
             mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
             if (selectedApartment) return;
 
             raycaster.setFromCamera(mouse, camera);
@@ -388,12 +694,14 @@
                 if (hoveredObject !== hit) {
                     if (hoveredObject) hoveredObject.material.color.setHex(hoveredObject.userData.defaultColor);
                     hoveredObject = hit;
-                    hoveredObject.material.color.setHex(0xe5a93c);
+                    hoveredObject.material.color.setHex(COLOR_HIGHLIGHT);
                     document.body.style.cursor = 'pointer';
                 }
-                const data = apartmentData[hit.userData.unitId];
+
+                const data = apartmentData[hit.userData.unitId] || { name: hit.userData.name, price: '€299,200', rooms: '2 Bedrooms' };
                 document.getElementById('tooltip-title').innerText = data.name;
                 document.getElementById('tooltip-sub').innerText = `${data.rooms} • ${data.price}`;
+                
                 tooltip.style.transform = `translate(${event.clientX}px, ${event.clientY - 20}px)`;
                 tooltip.style.opacity = '1';
             } else {
@@ -407,93 +715,309 @@
         }
 
         function onPointerClick(event) {
-            if (event.target.closest('#ui-overlay') || event.target.closest('#detail-panel')) return;
+            if (event.target.closest('#ui-overlay') || event.target.closest('#modal') || event.target.closest('#detail-panel') || event.target.closest('#tour-view-overlay')) return;
+
             raycaster.setFromCamera(mouse, camera);
             const intersects = raycaster.intersectObjects(hoverableMeshList);
+
             if (intersects.length > 0) {
-                inspectApartment(intersects[0].object.userData.unitId);
+                const hit = intersects[0].object;
+                inspectApartment(hit.userData.unitId);
             }
         }
 
         function inspectApartment(unitId) {
-            const data = apartmentData[unitId];
+            const data = apartmentData[unitId] || apartmentData['unit-4B'];
             selectedApartment = unitId;
 
-            document.getElementById('apt-title').innerText = data.name;
-            document.getElementById('apt-price').innerText = data.price;
-            document.getElementById('apt-sqm-price').innerText = data.sqmPrice;
-            document.getElementById('apt-category').innerText = data.rooms;
-            document.getElementById('apt-area').innerText = data.area;
-            document.getElementById('apt-floor').innerText = `${data.floor}th floor`;
+            const setElemText = (id, text) => {
+                const el = document.getElementById(id);
+                if (el) el.innerText = text;
+            };
+
+            setElemText('apt-title', data.name);
+            setElemText('apt-price', data.price);
+            setElemText('apt-sqm-price', data.sqmPrice);
+            setElemText('apt-category', data.rooms);
+            setElemText('apt-area', data.area);
+            setElemText('apt-floor', `${data.floor}th floor`);
+            setElemText('apt-orient', data.orient);
+            setElemText('apt-date', data.date);
 
             gsap.to('#hero-banner', { opacity: 0, x: -50, duration: 0.4 });
             document.getElementById('detail-panel').classList.remove('translate-x-[120%]');
 
-            gsap.to(camera.position, { x: data.pos.x * 1.5, y: data.pos.y + 1, z: 12, duration: 1.2, ease: 'power2.inOut' });
-            gsap.to(controls.target, { x: data.pos.x, y: data.pos.y, z: 3, duration: 1.2, ease: 'power2.inOut' });
+            const tPos = data.pos;
+            gsap.to(camera.position, {
+                x: tPos.x * 1.2,
+                y: tPos.y + 1,
+                z: tPos.z + 6,
+                duration: 1.2,
+                ease: 'power2.inOut'
+            });
         }
 
         function resetView() {
             selectedApartment = null;
             gsap.to('#hero-banner', { opacity: 1, x: 0, duration: 0.5 });
             document.getElementById('detail-panel').classList.add('translate-x-[120%]');
-            gsap.to(camera.position, { x: 22, y: 12, z: 28, duration: 1.4, ease: 'power3.inOut' });
-            gsap.to(controls.target, { x: 0, y: 8, z: 0, duration: 1.4, ease: 'power3.inOut' });
+
+            gsap.to(camera.position, {
+                x: defaultCamPos.x, y: defaultCamPos.y, z: defaultCamPos.z,
+                duration: 1.4, ease: 'power3.inOut'
+            });
+            gsap.to(controls.target, {
+                x: defaultTarget.x, y: defaultTarget.y, z: defaultTarget.z,
+                duration: 1.4, ease: 'power3.inOut'
+            });
         }
 
         function closeApartmentDetail() { resetView(); }
-        function focusRandomApartment() { inspectApartment('unit-4B'); }
-        function filterFloors(cat) { inspectApartment(cat === 'penthouses' ? 'unit-5A' : 'unit-3A'); }
-        function openModal() { alert('Contact our sales office at +12 345 678 910'); }
 
-        function toggleLighting() {
-            scene.background = scene.background.getHex() === 0xb0e12 ? new THREE.Color('#020406') : new THREE.Color('#0b0e12');
+        function focusRandomApartment() {
+            const keys = Object.keys(apartmentData);
+            inspectApartment(keys[Math.floor(Math.random() * keys.length)]);
         }
 
+        function selectFloorLevel(floorNumber) {
+            inspectApartment(`unit-${floorNumber}B`);
+        }
+
+        function filterFloors(category) {
+            if (category === 'penthouses') inspectApartment('unit-5B');
+            else if (category === 'apartments') inspectApartment('unit-3A');
+            else resetView();
+        }
+
+        function toggleLighting() {
+            isLightingDay = !isLightingDay;
+            const ambient = scene.getObjectByName('ambient');
+            const sun = scene.getObjectByName('sun');
+            if (isLightingDay) {
+                if (ambient) ambient.intensity = 1.1;
+                if (sun) sun.intensity = 2.4;
+            } else {
+                if (ambient) ambient.intensity = 0.55;
+                if (sun) sun.intensity = 1.8;
+            }
+        }
+
+        function toggleBgPanel() {
+            document.getElementById('bg-panel').classList.toggle('-translate-x-[120%]');
+        }
+
+        function toggleEnvironmentMesh(visible) {
+            if (environmentGroup) environmentGroup.visible = visible;
+        }
+
+        function openModal() {
+            document.getElementById('modal').classList.remove('opacity-0', 'pointer-events-none');
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.add('opacity-0', 'pointer-events-none');
+        }
+
+        function handleFormSubmit(e) {
+            e.preventDefault();
+            closeModal();
+        }
+
+        // --- EXACT LOADTOUR FUNCTION FROM INDEX_2.HTML WITH SUPABASE & PANNELLUM ---
         function launchCurrentApartmentTour() {
             const apt = apartmentData[selectedApartment] || apartmentData['unit-4B'];
-            loadSupabasePannellumTour(apt.tourId);
+            const targetId = apt.tourId || 'demo-tour-id';
+            loadSupabasePannellumTour(targetId);
         }
 
         async function loadSupabasePannellumTour(tourId) {
             const tourOverlay = document.getElementById('tour-view-overlay');
             tourOverlay.classList.remove('opacity-0', 'pointer-events-none');
-            document.getElementById('tour-title-bar').innerText = 'Loading 360° Tour...';
 
-            let scenes = [
-                {
-                    id: 'living',
-                    title: 'Luxury Living Room View',
-                    panorama_url: 'https://pannellum.org/images/alma.jpg'
-                }
-            ];
+            document.getElementById('tour-title-bar').innerText = 'Loading Virtual Tour...';
 
+            let projectTitle = '';
+            let scenes = [];
+
+            // Attempt Supabase Fetching
             try {
-                const { data } = await supabaseClient.from('scenes').select('*').eq('tour_id', tourId);
-                if (data && data.length > 0) scenes = data;
-            } catch (e) {}
+                const { data: tourData } = await supabaseClient
+                    .from('tours')
+                    .select('*')
+                    .eq('id', tourId)
+                    .single();
+
+                if (tourData) {
+                    projectTitle = tourData.title || tourData.name || tourData.project_name || '';
+                }
+
+                const { data: fetchedScenes, error } = await supabaseClient
+                    .from('scenes')
+                    .select('*')
+                    .eq('tour_id', tourId)
+                    .order('order_index', { ascending: true });
+
+                if (!error && fetchedScenes && fetchedScenes.length > 0) {
+                    scenes = fetchedScenes;
+                }
+            } catch (err) {
+                console.warn('Supabase query fallback to local demo scenes:', err);
+            }
+
+            // High Quality Demo Fallback if database table is empty or tourId not found
+            if (!scenes || scenes.length === 0) {
+                scenes = [
+                    {
+                        id: 'demo-living',
+                        title: 'Living Room Loggia View',
+                        panorama_url: 'https://pannellum.org/images/alma.jpg',
+                        hotspots: [
+                            { pitch: -5, yaw: 110, label: 'Go to Master Bedroom', target_scene_id: 'demo-bedroom' }
+                        ]
+                    },
+                    {
+                        id: 'demo-bedroom',
+                        title: 'Master Bedroom Suite',
+                        panorama_url: 'https://pannellum.org/images/cerro-toco.jpg',
+                        hotspots: [
+                            { pitch: 2, yaw: -70, label: 'Back to Living Room', target_scene_id: 'demo-living' }
+                        ]
+                    }
+                ];
+                projectTitle = 'Aria Residences Luxury Suite';
+            }
+
+            if (!projectTitle && scenes[0].tour_title) {
+                projectTitle = scenes[0].tour_title;
+            }
+
+            if (projectTitle) {
+                document.title = projectTitle;
+            }
+
+            // Pre-cache panorama images
+            scenes.forEach(scene => {
+                if (scene.panorama_url) {
+                    const img = new Image();
+                    img.src = scene.panorama_url;
+                }
+            });
 
             const scenesConfig = {};
-            scenes.forEach(s => {
-                scenesConfig[s.id] = { type: 'equirectangular', panorama: s.panorama_url, autoLoad: true };
+            scenes.forEach((scene) => {
+                const hotspots = (scene.hotspots || []).map(hs => {
+                    const targetScene = scenes.find(s => s.id === hs.target_scene_id);
+                    const previewUrl = targetScene ? targetScene.panorama_url : '';
+
+                    return {
+                        pitch: hs.pitch,
+                        yaw: hs.yaw,
+                        type: "info",
+                        text: hs.label,
+                        createTooltipFunc: function(div, args) {
+                            div.style.backgroundColor = 'transparent';
+                            div.style.border = 'none';
+                            div.style.width = '0';
+                            div.style.height = '0';
+                            div.style.overflow = 'visible';
+
+                            const container = document.createElement('div');
+                            container.className = 'custom-arrow-container';
+
+                            const icon = document.createElement('div');
+                            icon.className = 'custom-arrow-icon';
+                            if (args.preview) {
+                                icon.style.backgroundImage = `url('${args.preview}')`;
+                            }
+                            container.appendChild(icon);
+
+                            const lbl = document.createElement('div');
+                            lbl.className = 'custom-arrow-label';
+                            lbl.innerText = args.text;
+                            container.appendChild(lbl);
+
+                            div.appendChild(container);
+                        },
+                        createTooltipArgs: { text: hs.label, preview: previewUrl },
+                        
+                        clickHandlerFunc: function(evt, targetSceneId) {
+                            if (window.viewer) {
+                                const overlay = document.getElementById('transition-overlay');
+                                overlay.style.opacity = '1';
+
+                                window.viewer.lookAt(hs.pitch, hs.yaw, 10, 200, function() {
+                                    window.viewer.loadScene(targetSceneId);
+                                    window.viewer.setHfov(100, 0);
+                                    setTimeout(() => {
+                                        overlay.style.opacity = '0';
+                                    }, 100);
+                                });
+                            }
+                        },
+                        clickHandlerArgs: hs.target_scene_id
+                    };
+                });
+
+                scenesConfig[scene.id] = {
+                    title: "", 
+                    type: "equirectangular",
+                    panorama: scene.panorama_url,
+                    autoLoad: true,
+                    hotSpots: hotspots,
+                    sceneTitle: ""
+                };
             });
 
-            if (window.viewer) try { window.viewer.destroy(); } catch(e){}
+            if (window.viewer) {
+                try { window.viewer.destroy(); } catch(e){}
+            }
 
             window.viewer = pannellum.viewer('panorama', {
-                default: { firstScene: scenes[0].id, autoLoad: true, hfov: 100 },
+                default: {
+                    firstScene: scenes[0].id,
+                    sceneFadeDuration: 0,
+                    compass: true,
+                    orientationOnByDefault: true,
+                    mouseZoom: true,
+                    hfov: 100,
+                    showSceneTitle: false
+                },
                 scenes: scenesConfig
             });
-            document.getElementById('tour-title-bar').innerText = scenes[0].title;
+
+            window.viewer.on('load', function() {
+                if (window.viewer.isOrientationSupported() && !window.viewer.isOrientationActive()) {
+                    window.viewer.startOrientation();
+                }
+            });
+
+            window.viewer.on('scenechange', function(sceneId) {
+                if (scenesConfig[sceneId]) {
+                    const currentSceneObj = scenes.find(s => s.id === sceneId);
+                    const sceneTitle = currentSceneObj ? currentSceneObj.title : "";
+                    document.getElementById('tour-title-bar').innerText = sceneTitle;
+                    if (projectTitle) document.title = projectTitle;
+                }
+            });
+
+            document.getElementById('tour-title-bar').innerText = scenes[0].title || 'Aria Residence 360° View';
         }
 
         function closeTourViewer() {
-            document.getElementById('tour-view-overlay').classList.add('opacity-0', 'pointer-events-none');
+            const tourOverlay = document.getElementById('tour-view-overlay');
+            tourOverlay.classList.add('opacity-0', 'pointer-events-none');
+            document.title = 'Aria Residence | Interactive Luxury Living & Virtual Tours';
         }
 
+        // --- THREE.JS RENDER LOOP ---
         function animate() {
             requestAnimationFrame(animate);
             controls.update();
+
+            if (!selectedApartment && buildingGroup) {
+                buildingGroup.rotation.y += 0.0012;
+            }
+
             renderer.render(scene, camera);
         }
     </script>
