@@ -200,6 +200,13 @@
             width: 7px; height: 7px; border-radius: 50%;
             background-color: #38bdf8; box-shadow: 0 0 10px #38bdf8;
         }
+
+        /* Interior focus: remove all exterior navigation and scenery chrome. */
+        body.interior-focus { background: #f4f2ed !important; }
+        body.interior-focus #ui-overlay > header,
+        body.interior-focus #hero-banner { opacity: 0 !important; visibility: hidden !important; pointer-events: none !important; }
+        body.interior-focus #canvas-container { cursor: grab; }
+        body.interior-focus #detail-panel { background: rgba(15, 20, 27, 0.96); }
     </style>
 </head>
 <body class="bg-[#0b0e12] text-slate-100 dark transition-colors duration-300 min-h-screen relative overflow-hidden">
@@ -336,6 +343,14 @@
                     </div>
                 </div>
 
+                <div class="mb-5 rounded-2xl border border-brand-gold/25 bg-brand-gold/5 p-4">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-xs font-bold uppercase tracking-wider text-brand-gold">Interactive apartment plan</span>
+                        <i data-lucide="layout-dashboard" class="w-4 h-4 text-brand-gold"></i>
+                    </div>
+                    <p class="text-xs leading-relaxed text-slate-300">The selected apartment is isolated in the 3D model. Explore its room layout, furniture placement and circulation.</p>
+                </div>
+
                 <!-- DIRECT PANNELLUM SUPABASE TOUR LAUNCHER -->
                 <div class="mb-6">
                     <button onclick="launchCurrentApartmentTour()" class="w-full py-4 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-extrabold rounded-2xl text-sm uppercase tracking-wider transition shadow-xl shadow-sky-500/25 flex items-center justify-center space-x-2.5">
@@ -463,14 +478,18 @@
         // --- THREE.JS GLOBAL VARIABLES ---
         let scene, camera, renderer, controls;
         let buildingGroup, environmentGroup;
+        let exteriorSceneBackground = null, exteriorSceneFog = null;
+        let activeFloorPlan = null;
+        const floorPlanCache = {};
+        let isInFloorPlan = false;
         let raycaster, mouse;
         let hoverableMeshList = [];
         let hoveredObject = null;
         let selectedApartment = null;
-        let isLightingDay = false;
+        let isLightingDay = true;
         
-        const defaultCamPos = { x: 25, y: 16.5, z: 29 };
-        const defaultTarget = { x: 0, y: 9.0, z: 0 };
+        const defaultCamPos = { x: 24, y: 18.5, z: -34 };
+        const defaultTarget = { x: 0, y: 10.0, z: 8.5 };
 
         const COLOR_CONCRETE = 0xded9d0;
         const COLOR_TIMBER = 0xab7d4d;
@@ -526,8 +545,10 @@
             const container = document.getElementById('canvas-container');
 
             scene = new THREE.Scene();
-            scene.background = new THREE.Color('#9aa9b5');
-            scene.fog = new THREE.Fog(0x9aa9b5, 75, 190);
+            scene.background = new THREE.Color('#b8c9d5');
+            scene.fog = new THREE.Fog(0xb8c9d5, 95, 230);
+            exteriorSceneBackground = scene.background.clone();
+            exteriorSceneFog = scene.fog;
 
             camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 1000);
             camera.position.set(defaultCamPos.x, defaultCamPos.y, defaultCamPos.z);
@@ -568,15 +589,19 @@
 
             buildRealisticUrbanEnvironment();
             buildDetailedGridBuilding();
+            // Turn the building 180 degrees so its primary facade faces away from the hero CTA.
+            // Apartment hit areas rotate with the building, while floor-plan/camera coordinates
+            // below are mirrored to keep selection and walk-in transitions aligned.
+            buildingGroup.rotation.y = Math.PI;
         }
 
         function setupLighting() {
-            const ambient = new THREE.AmbientLight(0xdce8f4, 0.72);
+            const ambient = new THREE.AmbientLight(0xe6edf2, 0.58);
             ambient.name = 'ambient';
             scene.add(ambient);
 
-            const sunLight = new THREE.DirectionalLight(0xffe6c2, 2.35);
-            sunLight.position.set(-28, 42, 30);
+            const sunLight = new THREE.DirectionalLight(0xfff0d8, 2.0);
+            sunLight.position.set(-34, 48, -12);
             sunLight.castShadow = true;
             sunLight.shadow.mapSize.set(4096, 4096);
             sunLight.shadow.camera.left = -35;
@@ -588,15 +613,18 @@
             sunLight.name = 'sun';
             scene.add(sunLight);
 
-            const hemi = new THREE.HemisphereLight(0xc6ddf4, 0x62584b, 0.78);
+            const hemi = new THREE.HemisphereLight(0xdcecff, 0x756957, 0.72);
+            hemi.name = 'hemi';
             scene.add(hemi);
 
-            const fill = new THREE.DirectionalLight(0xb7d8ff, 0.48);
+            const fill = new THREE.DirectionalLight(0xd1e3f2, 0.30);
+            fill.name = 'fill';
             fill.position.set(24, 18, -26);
             scene.add(fill);
 
             const facadeFill = new THREE.PointLight(0xffd5a0, 38, 42, 2);
-            facadeFill.position.set(-8, 11, 17);
+            facadeFill.name = 'facadeFill';
+            facadeFill.position.set(-8, 11, -17);
             scene.add(facadeFill);
         }
 
@@ -640,80 +668,136 @@
         }
 
         function buildRealisticUrbanEnvironment() {
+            // A continuous urban streetscape: a landscaped arrival court in front,
+            // a real street corridor behind the residence, and a consistent row of
+            // neighboring buildings beyond it. The residence remains unobstructed.
             const groundMat = new THREE.MeshStandardMaterial({
-                color: 0x77786f, roughness: 1, map: makeSurfaceTexture('#77786f', [30, 35, 28], 18, 18, 12000)
+                color: 0x85847b, roughness: 1,
+                map: makeSurfaceTexture('#85847b', [34, 39, 32], 28, 28, 15000)
             });
-            const ground = new THREE.Mesh(new THREE.PlaneGeometry(220, 220), groundMat);
+            const ground = new THREE.Mesh(new THREE.PlaneGeometry(300, 300), groundMat);
             ground.rotation.x = -Math.PI / 2;
-            ground.position.y = -0.12;
+            ground.position.y = -0.16;
             ground.receiveShadow = true;
             environmentGroup.add(ground);
 
-            const roadMat = new THREE.MeshStandardMaterial({ color: 0x292d31, roughness: 0.96, map: asphaltTexture });
-            const road = new THREE.Mesh(new THREE.PlaneGeometry(22, 190), roadMat);
+            const asphaltTextureLocal = makeSurfaceTexture('#303438', [145, 145, 145], 12, 7, 18000);
+            const roadMat = new THREE.MeshStandardMaterial({ color: 0x303438, roughness: 0.96, map: asphaltTextureLocal });
+            const roadZ = 21.5;
+            const road = new THREE.Mesh(new THREE.PlaneGeometry(220, 14), roadMat);
             road.rotation.x = -Math.PI / 2;
-            road.position.set(23, -0.045, 0);
+            road.position.set(0, -0.025, roadZ);
             road.receiveShadow = true;
             environmentGroup.add(road);
 
-            const sidewalkMat = new THREE.MeshStandardMaterial({ color: 0xb8b2a7, roughness: 0.9 });
-            const curbMat = new THREE.MeshStandardMaterial({ color: 0x777b7d, roughness: 0.85 });
+            const sidewalkMat = new THREE.MeshStandardMaterial({ color: 0xbab5aa, roughness: 0.92 });
+            const curbMat = new THREE.MeshStandardMaterial({ color: 0x777b7b, roughness: 0.88 });
             [-1, 1].forEach(side => {
-                const x = 11.3 * side;
-                const walk = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 190), sidewalkMat);
+                const z = roadZ + side * 7.25;
+                const walk = new THREE.Mesh(new THREE.PlaneGeometry(220, 2.5), sidewalkMat);
                 walk.rotation.x = -Math.PI / 2;
-                walk.position.set(x, 0.015, 0);
+                walk.position.set(0, 0.015, z);
                 walk.receiveShadow = true;
                 environmentGroup.add(walk);
-                addBox(environmentGroup, 0.22, 0.18, 190, curbMat, x + side * 1.25, 0.09, 0);
+                addBox(environmentGroup, 220, 0.16, 0.22, curbMat, 0, 0.08, z - side * 1.32);
             });
 
-            // Road markings and pedestrian crossing details.
-            const lineMat = new THREE.MeshStandardMaterial({ color: 0xd9d4c8, roughness: 0.8 });
-            for (let z = -82; z <= 82; z += 13) {
-                const dash = new THREE.Mesh(new THREE.PlaneGeometry(0.16, 5.5), lineMat);
+            // Center line and edge lines make the road read as a functioning street.
+            const markingMat = new THREE.MeshStandardMaterial({ color: 0xe4dfd2, roughness: 0.8 });
+            for (let x = -102; x <= 102; x += 12) {
+                const dash = new THREE.Mesh(new THREE.PlaneGeometry(5.0, 0.13), markingMat);
                 dash.rotation.x = -Math.PI / 2;
-                dash.position.set(23, 0.012, z);
+                dash.position.set(x, 0.012, roadZ);
                 environmentGroup.add(dash);
             }
+            [-5.7, 5.7].forEach(zOffset => {
+                const line = new THREE.Mesh(new THREE.PlaneGeometry(220, 0.09), markingMat);
+                line.rotation.x = -Math.PI / 2;
+                line.position.set(0, 0.012, roadZ + zOffset);
+                environmentGroup.add(line);
+            });
 
-            // Landscaped planting beds with layered shrubs and trees.
-            const planterMat = new THREE.MeshStandardMaterial({ color: 0x57584f, roughness: 0.95 });
-            for (let z = -70; z <= 70; z += 14) {
-                const planter = addBox(environmentGroup, 2.4, 0.42, 3.8, planterMat, 9.0, 0.22, z);
-                planter.castShadow = true;
-                const tree = createDetailed3DTree();
-                tree.position.set(9.0, 0.42, z);
-                tree.scale.setScalar(0.92 + (Math.abs(z) % 3) * 0.035);
-                environmentGroup.add(tree);
-                for (let s = 0; s < 4; s++) {
-                    const shrubMat = new THREE.MeshStandardMaterial({ color: [0x344c38, 0x425b40, 0x526447][s % 3], roughness: 0.92 });
-                    const shrub = new THREE.Mesh(new THREE.IcosahedronGeometry(0.48 + (s % 2) * 0.12, 2), shrubMat);
-                    shrub.position.set(7.6 + (s % 2) * 0.8, 0.62, z + (s - 1.5) * 0.7);
-                    shrub.castShadow = true;
-                    environmentGroup.add(shrub);
+            // Arrival forecourt is on the camera-facing side of the rotated building.
+            const pavingMat = new THREE.MeshStandardMaterial({ color: 0xa9a69d, roughness: 0.88 });
+            const forecourt = new THREE.Mesh(new THREE.PlaneGeometry(25, 8.5), pavingMat);
+            forecourt.rotation.x = -Math.PI / 2;
+            forecourt.position.set(0, 0.012, -10.8);
+            forecourt.receiveShadow = true;
+            environmentGroup.add(forecourt);
+            const pavingJoint = new THREE.MeshStandardMaterial({ color: 0x77766f, roughness: 1 });
+            for (let x = -11; x <= 11; x += 2.75) {
+                const joint = new THREE.Mesh(new THREE.PlaneGeometry(0.035, 8.2), pavingJoint);
+                joint.rotation.x = -Math.PI / 2;
+                joint.position.set(x, 0.02, -10.8);
+                environmentGroup.add(joint);
+            }
+
+            // Neighboring mid-rise buildings form one continuous block beyond the road.
+            const contextMats = [0x85847e, 0x9a9387, 0x727d80, 0xa39b8d, 0x777875].map(c =>
+                new THREE.MeshStandardMaterial({ color: c, roughness: 0.91, metalness: 0.025 })
+            );
+            const dayWindow = new THREE.MeshStandardMaterial({ color: 0x526b79, roughness: 0.32, metalness: 0.2, emissive: 0x000000 });
+            const nightWindow = new THREE.MeshStandardMaterial({ color: 0x9b8968, roughness: 0.32, metalness: 0.12, emissive: 0xffbd68, emissiveIntensity: 0.0 });
+            window.contextNightWindows = [];
+            for (let i = 0; i < 13; i++) {
+                const x = -112 + i * 18.7;
+                const w = 13.5 + (i % 3) * 2.0;
+                const h = 15 + ((i * 7) % 15);
+                const d = 11 + (i % 2) * 2.5;
+                const z = 49 + (i % 2) * 1.2;
+                const base = addBox(environmentGroup, w, h, d, contextMats[i % contextMats.length], x, h / 2, z, true, true);
+                // Subtle plinths and roof caps prevent the neighboring blocks looking like floating boxes.
+                addBox(environmentGroup, w + 0.35, 0.45, d + 0.35, contextMats[(i + 1) % contextMats.length], x, 0.225, z, false, true);
+                addBox(environmentGroup, w + 0.25, 0.24, d + 0.25, contextMats[i % contextMats.length], x, h + 0.12, z, false, true);
+                for (let fy = 2.2; fy < h - 1.1; fy += 2.7) {
+                    for (let wx = -w * 0.34; wx <= w * 0.34; wx += 2.35) {
+                        const lit = ((Math.floor(fy * 2 + wx + i * 3) % 5) === 0);
+                        const win = addBox(environmentGroup, 1.35, 1.55, 0.075,
+                            lit ? nightWindow : dayWindow,
+                            x + wx, fy, z - d / 2 - 0.055, false, false);
+                        window.contextNightWindows.push(win);
+                    }
+                }
+                // A few narrow vertical facade piers add scale and architectural rhythm.
+                for (let px = -w * 0.42; px <= w * 0.42; px += 4.7) {
+                    addBox(environmentGroup, 0.12, h - 0.7, 0.14, contextMats[(i + 2) % contextMats.length], x + px, h / 2, z - d / 2 - 0.08, false, false);
                 }
             }
 
-            // Distant context blocks create a believable urban skyline without distracting.
-            const contextMats = [
-                new THREE.MeshStandardMaterial({ color: 0x777a78, roughness: 0.92 }),
-                new THREE.MeshStandardMaterial({ color: 0x8c877d, roughness: 0.9 }),
-                new THREE.MeshStandardMaterial({ color: 0x626b70, roughness: 0.9 })
-            ];
-            for (let i = 0; i < 18; i++) {
-                const side = i % 2 ? -1 : 1;
-                const z = -76 + Math.floor(i / 2) * 18;
-                const w = 8 + (i % 3) * 3;
-                const h = 8 + ((i * 7) % 17);
-                const d = 9 + (i % 4) * 2;
-                const block = addBox(environmentGroup, w, h, d, contextMats[i % 3], side * (25 + (i % 3) * 5), h / 2 - 0.05, z, true, true);
-                block.material = contextMats[i % 3];
-                // Subtle repetitive window bands on background buildings.
-                const winMat = new THREE.MeshStandardMaterial({ color: 0x526875, metalness: 0.35, roughness: 0.28 });
-                for (let fy = 1.5; fy < h - 1; fy += 2.8) {
-                    addBox(environmentGroup, w * 0.72, 0.85, 0.06, winMat, side * (25 + (i % 3) * 5), fy, z + d / 2 + 0.035, false, false);
+            // Small street trees and planted verges frame the scene without hiding the residence.
+            const planterMat = new THREE.MeshStandardMaterial({ color: 0x68685d, roughness: 0.96 });
+            const soilMat = new THREE.MeshStandardMaterial({ color: 0x45483b, roughness: 1 });
+            [-1, 1].forEach(side => {
+                for (let x = -45; x <= 45; x += 18) {
+                    const z = roadZ + side * 10.2;
+                    addBox(environmentGroup, 3.2, 0.34, 2.7, planterMat, x, 0.17, z, true, true);
+                    const soil = new THREE.Mesh(new THREE.PlaneGeometry(2.9, 2.4), soilMat);
+                    soil.rotation.x = -Math.PI / 2;
+                    soil.position.set(x, 0.35, z);
+                    environmentGroup.add(soil);
+                    const tree = createDetailed3DTree();
+                    tree.position.set(x, 0.35, z);
+                    tree.scale.setScalar(0.55);
+                    environmentGroup.add(tree);
                 }
+            });
+
+            // Street lamps follow the far sidewalk in a regular, believable rhythm.
+            window.streetLampLights = [];
+            for (let x = -90; x <= 90; x += 30) {
+                addBox(environmentGroup, 0.13, 5.8, 0.13,
+                    new THREE.MeshStandardMaterial({ color: 0x34393b, metalness: 0.72, roughness: 0.32 }),
+                    x, 2.9, roadZ + 9.4, true, true);
+                const arm = addBox(environmentGroup, 1.0, 0.09, 0.09,
+                    new THREE.MeshStandardMaterial({ color: 0x34393b, metalness: 0.72, roughness: 0.32 }),
+                    x + 0.42, 5.68, roadZ + 9.4, false, false);
+                const lamp = new THREE.PointLight(0xffc985, 0, 20, 2);
+                lamp.position.set(x + 0.78, 5.5, roadZ + 9.4);
+                environmentGroup.add(lamp);
+                window.streetLampLights.push(lamp);
+                const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.13, 12, 8), new THREE.MeshBasicMaterial({ color: 0xffd8a5 }));
+                bulb.position.copy(lamp.position);
+                environmentGroup.add(bulb);
             }
         }
 
@@ -801,13 +885,41 @@
             }
 
             const roofY = 2.8 + floorCount * floorHeight + 0.32;
-            addBox(buildingGroup, bWidth + 1.0, 0.28, bDepth + 1.0, concrete, 0, roofY, 0);
-            addBox(buildingGroup, bWidth + 0.9, 0.78, 0.22, warmConcrete, 0, roofY + 0.48, bDepth / 2);
-            addBox(buildingGroup, 0.22, 0.78, bDepth + 0.7, warmConcrete, -7.65, roofY + 0.48, 0);
-            addBox(buildingGroup, 0.22, 0.78, bDepth + 0.7, warmConcrete, 7.65, roofY + 0.48, 0);
-            addBox(buildingGroup, 8.8, 1.8, 5.2, warmConcrete, 0, roofY + 1.05, -1.4);
-            addBox(buildingGroup, 8.25, 1.25, 0.12, darkGlass, 0, roofY + 1.08, 1.25, false);
-            addBox(buildingGroup, 9.2, 0.16, 5.6, darkMetal, 0, roofY + 2.0, -1.4, false);
+            // A usable roof terrace with a low parapet, glazed penthouse pavilion,
+            // shaded pergola and planted edges (rather than a single oversized roof box).
+            addBox(buildingGroup, bWidth + 1.0, 0.30, bDepth + 1.0, concrete, 0, roofY, 0);
+            const parapetH = 0.72;
+            addBox(buildingGroup, bWidth + 0.9, parapetH, 0.22, warmConcrete, 0, roofY + parapetH / 2, bDepth / 2 - 0.05);
+            addBox(buildingGroup, bWidth + 0.9, parapetH, 0.22, warmConcrete, 0, roofY + parapetH / 2, -bDepth / 2 + 0.05);
+            addBox(buildingGroup, 0.22, parapetH, bDepth, warmConcrete, -7.65, roofY + parapetH / 2, 0);
+            addBox(buildingGroup, 0.22, parapetH, bDepth, warmConcrete, 7.65, roofY + parapetH / 2, 0);
+
+            const roofGlass = new THREE.MeshPhysicalMaterial({ color: 0x9bb9c4, metalness: 0.24, roughness: 0.16, transparent: true, opacity: 0.72, transmission: 0.16, clearcoat: 1 });
+            const roofFrame = new THREE.MeshStandardMaterial({ color: 0x30383a, metalness: 0.72, roughness: 0.28 });
+            // Compact rooftop lounge/penthouse placed toward the rear of the roof.
+            addBox(buildingGroup, 7.2, 0.16, 4.8, darkMetal, 0, roofY + 0.12, 1.65, false);
+            addBox(buildingGroup, 7.0, 2.35, 0.12, roofGlass, 0, roofY + 1.3, -0.75, false);
+            addBox(buildingGroup, 0.12, 2.35, 4.7, roofGlass, -3.5, roofY + 1.3, 1.6, false);
+            addBox(buildingGroup, 0.12, 2.35, 4.7, roofGlass, 3.5, roofY + 1.3, 1.6, false);
+            addBox(buildingGroup, 7.2, 0.18, 4.9, warmConcrete, 0, roofY + 2.5, 1.65, false);
+            // Slim pergola over the terrace on the opposite side of the pavilion.
+            for (let x = -3.6; x <= 3.6; x += 1.8) {
+                addBox(buildingGroup, 0.12, 2.35, 0.12, roofFrame, x, roofY + 1.18, -3.35, false);
+                addBox(buildingGroup, 0.12, 2.35, 0.12, roofFrame, x, roofY + 1.18, -0.85, false);
+            }
+            for (let z = -3.35; z <= -0.85; z += 0.5) {
+                addBox(buildingGroup, 7.4, 0.10, 0.12, roofFrame, 0, roofY + 2.34, z, false);
+            }
+            const roofPlanter = new THREE.MeshStandardMaterial({ color: 0x555b4d, roughness: 0.95 });
+            [-6.2, 6.2].forEach(x => {
+                addBox(buildingGroup, 1.0, 0.55, 3.8, roofPlanter, x, roofY + 0.28, -0.1, false, true);
+                for (let j = 0; j < 3; j++) {
+                    const shrub = new THREE.Mesh(new THREE.SphereGeometry(0.42, 10, 8), new THREE.MeshStandardMaterial({ color: 0x496044, roughness: 0.95 }));
+                    shrub.position.set(x, roofY + 0.82, -1.25 + j * 1.1);
+                    shrub.scale.set(1.15, 0.72, 1.0);
+                    buildingGroup.add(shrub);
+                }
+            });
 
             for (let f = 1; f <= floorCount; f++) {
                 const y = 2.8 + f * floorHeight + 1.3;
@@ -871,6 +983,7 @@
         }
 
         function onPointerClick(event) {
+            if (isInFloorPlan) return;
             if (event.target.closest('#ui-overlay') || event.target.closest('#modal') || event.target.closest('#detail-panel') || event.target.closest('#tour-view-overlay')) return;
 
             raycaster.setFromCamera(mouse, camera);
@@ -882,50 +995,261 @@
             }
         }
 
+        // --- INDIVIDUAL 3D APARTMENT FLOOR PLANS ---
+        // Each apartment gets its own furnished, cutaway plan at its real building position.
+        function makePlanLabel(text, x, z, y, color = '#f3eadb') {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512; canvas.height = 128;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = 'rgba(12,17,23,0.78)';
+            ctx.roundRect(8, 8, 496, 112, 24);
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(229,169,60,0.7)'; ctx.lineWidth = 4;
+            ctx.strokeRect(10, 10, 492, 108);
+            ctx.font = '700 42px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillStyle = color; ctx.fillText(text.toUpperCase(), 256, 64);
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.encoding = THREE.sRGBEncoding;
+            const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true, depthWrite: false }));
+            sprite.position.set(x, y, z); sprite.scale.set(2.25, 0.56, 1);
+            return sprite;
+        }
+
+        function createApartmentFloorPlan(unitId) {
+            if (floorPlanCache[unitId]) return floorPlanCache[unitId];
+            const data = apartmentData[unitId];
+            const side = data.pos.x;
+            const floorY = 2.8 + data.floor * 2.8;
+            const baseY = floorY + 0.22;
+            const group = new THREE.Group();
+            group.name = `floor-plan-${unitId}`;
+            group.position.set(side, baseY, 0);
+            group.visible = false;
+            group.scale.setScalar(0.96);
+
+            const floorMat = new THREE.MeshStandardMaterial({ color: 0xc7bca9, roughness: 0.88 });
+            const woodMat = new THREE.MeshStandardMaterial({ color: 0x9a704d, roughness: 0.72 });
+            const tileMat = new THREE.MeshStandardMaterial({ color: 0xb7c0bd, roughness: 0.55 });
+            const wallMat = new THREE.MeshStandardMaterial({ color: 0xf0ece3, roughness: 0.92 });
+            const darkWall = new THREE.MeshStandardMaterial({ color: 0x777b7c, roughness: 0.82 });
+            const fabric = new THREE.MeshStandardMaterial({ color: 0x777f83, roughness: 0.96 });
+            const paleFabric = new THREE.MeshStandardMaterial({ color: 0xd8d0c2, roughness: 0.96 });
+            const woodDark = new THREE.MeshStandardMaterial({ color: 0x594332, roughness: 0.75 });
+            const metal = new THREE.MeshStandardMaterial({ color: 0x343b40, metalness: 0.65, roughness: 0.34 });
+            const glassMat = new THREE.MeshPhysicalMaterial({ color: 0x91b6c4, transparent: true, opacity: 0.48, roughness: 0.15, transmission: 0.25 });
+            const warm = new THREE.MeshStandardMaterial({ color: 0xe5c58d, emissive: 0x8d6330, emissiveIntensity: 0.12, roughness: 0.65 });
+            const box = (w,h,d,mat,x,y,z) => addBox(group,w,h,d,mat,x,y,z,false,true);
+            const wall = (w,h,d,x,y,z,mat=wallMat) => box(w,h,d,mat,x,y,z);
+
+            // Apartment slab and subtle zone finishes
+            box(7.15,0.18,11.25,floorMat,0,0,0);
+            box(6.9,0.025,4.0,woodMat,0,0.105,3.35); // living / dining
+            box(6.9,0.026,3.15,woodMat,0,0.106,-3.85); // bedrooms
+            box(1.75,0.028,2.5,tileMat,-2.45,0.108,-0.35); // bathroom / utility
+            box(1.65,0.028,2.5,tileMat,2.55,0.108,-0.35);
+
+            // Perimeter cutaway walls (front stays low to keep the plan readable)
+            wall(7.15,1.18,0.18,0,0.68,-5.55,darkWall);
+            wall(0.18,1.18,11.25,-3.575,0.68,0,darkWall);
+            wall(0.18,1.18,11.25,3.575,0.68,0,darkWall);
+            wall(7.15,0.42,0.18,0,0.30,5.55,wallMat);
+            // Interior partitions and door gaps
+            wall(0.12,1.02,3.0,0.25,0.60,-3.95,wallMat);
+            wall(2.9,1.02,0.12,-2.05,0.60,-1.95,wallMat);
+            wall(2.0,1.02,0.12,2.55,0.60,-1.95,wallMat);
+            wall(0.12,1.02,2.0,-1.55,0.60,-0.25,wallMat);
+            wall(0.12,1.02,2.0,1.55,0.60,-0.25,wallMat);
+            wall(2.0,1.02,0.12,-2.55,0.60,0.85,wallMat);
+            wall(2.0,1.02,0.12,2.55,0.60,0.85,wallMat);
+
+            // Kitchen cabinetry, island, sink and hob
+            box(4.8,0.78,0.68,woodDark,0,0.53,4.65);
+            box(4.9,0.10,0.74,wallMat,0,0.97,4.62);
+            box(1.05,0.08,0.42,metal,-1.35,1.04,4.60);
+            box(0.85,0.08,0.42,metal,1.25,1.04,4.60);
+            box(1.75,0.88,0.85,woodMat,1.65,0.55,2.65);
+            box(1.82,0.08,0.91,wallMat,1.65,1.02,2.65);
+            // Dining table and chairs
+            box(1.55,0.12,0.92,woodDark,-0.55,0.83,3.15);
+            for (const [x,z] of [[-1.35,2.75],[0.25,2.75],[-1.35,3.55],[0.25,3.55]]) {
+                box(0.42,0.42,0.42,fabric,x,0.36,z);
+            }
+            // Lounge sofa, coffee table, media console
+            box(2.35,0.52,0.88,fabric,-1.75,0.40,1.45);
+            box(2.35,0.62,0.18,paleFabric,-1.75,0.76,1.10);
+            box(1.15,0.18,0.72,woodDark,-0.05,0.28,1.35);
+            box(2.0,0.45,0.18,woodDark,0,0.35,5.25);
+            // Bathroom fixtures
+            box(0.82,0.55,0.82,wallMat,-2.55,0.38,-0.85);
+            box(0.65,0.12,0.48,glassMat,-2.55,0.70,-0.85);
+            box(0.52,0.42,0.58,wallMat,-2.55,0.31,0.35);
+            box(0.72,0.18,0.48,wallMat,2.55,0.42,-0.85);
+            box(0.65,0.65,0.10,metal,2.55,0.68,-1.45);
+
+            // Bedroom count follows the apartment's listing data; each room is furnished separately.
+            const bedCountMatch = data.rooms.match(/(\d+)\s*Bedroom/i);
+            const bedCount = bedCountMatch ? Math.max(1, Math.min(4, parseInt(bedCountMatch[1],10))) : (data.floor === 6 ? 3 : 2);
+            const bedroomCenters = bedCount === 1 ? [[1.65,-3.75]] :
+                bedCount === 2 ? [[-1.75,-3.65],[1.75,-3.65]] :
+                bedCount === 3 ? [[-2.0,-3.75],[1.95,-3.75],[1.95,-0.15]] :
+                [[-2.0,-3.75],[1.95,-3.75],[-2.0,-0.15],[1.95,-0.15]];
+            bedroomCenters.forEach((pt, i) => {
+                const [x,z] = pt;
+                const bw = bedCount === 1 ? 1.65 : 1.35;
+                box(bw,0.34,2.0,woodDark,x,0.34,z);
+                box(bw-0.08,0.16,1.82,paleFabric,x,0.58,z+0.02);
+                box(bw,0.52,0.16,fabric,x,0.76,z-0.94);
+                box(0.44,0.28,0.42,woodDark,x-bw/2-0.30,0.25,z-0.65);
+                box(0.44,0.28,0.42,woodDark,x+bw/2+0.30,0.25,z-0.65);
+                box(0.95,0.58,0.38,woodMat,x,0.32,z+1.55);
+                group.add(makePlanLabel(`Bedroom ${i+1}`,x, z-1.42,1.42));
+            });
+
+            // Balcony / glazing edge, plan title and orientation marker
+            box(6.85,0.08,0.72,tileMat,0,0.15,5.95);
+            box(6.85,0.10,0.06,metal,0,1.02,6.28);
+            box(6.85,0.82,0.045,glassMat,0,0.60,6.28);
+            group.add(makePlanLabel('Living & Dining',-0.95,1.85,1.55));
+            group.add(makePlanLabel('Kitchen',2.05,3.75,1.55));
+            group.add(makePlanLabel('Bathroom',-2.55,-0.25,1.48));
+            group.add(makePlanLabel(`${data.area} • ${data.name}`,0,-6.75,1.65,'#e5b45e'));
+            // Warm ceiling-style lights rendered as small luminous discs
+            [[-2.5,2.2],[2.4,2.2],[-2.2,-2.2],[2.2,-2.2]].forEach(([x,z]) => {
+                const light = new THREE.Mesh(new THREE.CircleGeometry(0.10,16),warm);
+                light.rotation.x = -Math.PI/2; light.position.set(x,1.24,z); group.add(light);
+            });
+            scene.add(group);
+            floorPlanCache[unitId] = group;
+            return group;
+        }
+
         function inspectApartment(unitId) {
             const data = apartmentData[unitId] || apartmentData['unit-4B'];
             selectedApartment = unitId;
+            isInFloorPlan = true;
 
             const setElemText = (id, text) => {
                 const el = document.getElementById(id);
                 if (el) el.innerText = text;
             };
-
             setElemText('apt-title', data.name);
             setElemText('apt-price', data.price);
             setElemText('apt-sqm-price', data.sqmPrice);
             setElemText('apt-category', data.rooms);
             setElemText('apt-area', data.area);
-            setElemText('apt-floor', `${data.floor}th floor`);
+            setElemText('apt-floor', `${data.floor}${data.floor === 1 ? 'st' : data.floor === 2 ? 'nd' : data.floor === 3 ? 'rd' : 'th'} floor`);
             setElemText('apt-orient', data.orient);
             setElemText('apt-date', data.date);
 
-            gsap.to('#hero-banner', { opacity: 0, x: -50, duration: 0.4 });
+            gsap.killTweensOf(camera.position);
+            gsap.killTweensOf(controls.target);
+            gsap.killTweensOf('#hero-banner');
+            gsap.to('#hero-banner', { opacity: 0, x: -32, duration: 0.75, ease: 'power2.inOut' });
             document.getElementById('detail-panel').classList.remove('translate-x-[120%]');
 
-            const tPos = data.pos;
-            gsap.to(camera.position, {
-                x: tPos.x * 1.2,
-                y: tPos.y + 1,
-                z: tPos.z + 6,
-                duration: 1.2,
-                ease: 'power2.inOut'
-            });
+            if (activeFloorPlan) activeFloorPlan.visible = false;
+            activeFloorPlan = createApartmentFloorPlan(unitId);
+            activeFloorPlan.visible = true;
+            activeFloorPlan.scale.setScalar(0.001);
+
+            const side = data.pos.x;
+            const floorY = 2.8 + data.floor * 2.8;
+            // The plan's origin is the apartment's actual position within the building.
+            // Approach its clicked facade window, pass through the facade, then lift
+            // into a clean cutaway overview of that same interior.
+            const mirroredSide = -side;
+            const facade = { x: mirroredSide, y: floorY + 1.35, z: -6.9 };
+            const threshold = { x: mirroredSide, y: floorY + 1.35, z: -3.2 };
+            const interiorView = { x: mirroredSide - 0.35, y: floorY + 10.5, z: -14.5 };
+            const interiorTarget = { x: mirroredSide, y: floorY + 0.35, z: 0 };
+
+            controls.enabled = false;
+            buildingGroup.visible = true;
+            activeFloorPlan.position.set(mirroredSide, floorY + 0.22, 0);
+
+            const tl = gsap.timeline({ onComplete: () => {
+                controls.target.set(interiorTarget.x, interiorTarget.y, interiorTarget.z);
+                controls.enabled = true;
+                controls.minDistance = 7;
+                controls.maxDistance = 22;
+            }});
+
+            // Stage 1: camera travels directly toward the exact clicked window.
+            tl.to(camera.position, {
+                x: facade.x, y: facade.y, z: facade.z,
+                duration: 1.65, ease: 'power2.inOut',
+                onUpdate: () => camera.lookAt(facade.x, facade.y, 0)
+            }, 0);
+            tl.to(controls.target, { x: side, y: floorY + 1.25, z: 0, duration: 1.65, ease: 'power2.inOut' }, 0);
+
+            // Stage 2: cross the building envelope as if entering through the window/door.
+            tl.to(camera.position, {
+                x: threshold.x, y: threshold.y, z: threshold.z,
+                duration: 1.15, ease: 'sine.inOut',
+                onUpdate: () => camera.lookAt(side, floorY + 1.15, 0),
+                onComplete: () => {
+                    buildingGroup.visible = false;
+                    environmentGroup.visible = false;
+                    scene.background = new THREE.Color('#f4f2ed');
+                    scene.fog = null;
+                    document.body.classList.add('interior-focus');
+                }
+            }, 1.65);
+
+            // Stage 3: rise into the apartment cutaway only after passing inside.
+            tl.to(activeFloorPlan.scale, { x: 1, y: 1, z: 1, duration: 1.25, ease: 'power2.out' }, 2.35);
+            tl.to(camera.position, {
+                x: interiorView.x, y: interiorView.y, z: interiorView.z,
+                duration: 1.8, ease: 'power2.inOut',
+                onUpdate: () => camera.lookAt(interiorTarget.x, interiorTarget.y, interiorTarget.z)
+            }, 2.55);
+            tl.to(controls.target, {
+                x: interiorTarget.x, y: interiorTarget.y, z: interiorTarget.z,
+                duration: 1.8, ease: 'power2.inOut'
+            }, 2.55);
         }
 
         function resetView() {
+            if (!selectedApartment && !isInFloorPlan) return;
             selectedApartment = null;
-            gsap.to('#hero-banner', { opacity: 1, x: 0, duration: 0.5 });
+            isInFloorPlan = false;
+            controls.enabled = false;
+            gsap.killTweensOf(camera.position);
+            gsap.killTweensOf(controls.target);
+            gsap.killTweensOf('#hero-banner');
+            gsap.to('#hero-banner', { opacity: 1, x: 0, duration: 0.85, ease: 'power2.inOut' });
             document.getElementById('detail-panel').classList.add('translate-x-[120%]');
 
-            gsap.to(camera.position, {
+            const plan = activeFloorPlan;
+            const data = plan ? apartmentData[plan.name.replace('floor-plan-','')] : null;
+            // Bring the exterior back only after the camera has backed through the facade.
+            const exitPoint = plan ? { x: plan.position.x, y: plan.position.y + 1.35, z: -7.2 } : { x: 0, y: 10, z: -8 };
+            const tl = gsap.timeline({ onComplete: () => {
+                if (plan) plan.visible = false;
+                controls.target.set(defaultTarget.x, defaultTarget.y, defaultTarget.z);
+                controls.enabled = true;
+                controls.minDistance = 12;
+                controls.maxDistance = 90;
+            }});
+            tl.to(camera.position, {
+                x: exitPoint.x, y: exitPoint.y, z: -6.9, duration: 1.2, ease: 'sine.inOut',
+                onUpdate: () => camera.lookAt(exitPoint.x, exitPoint.y, 0)
+            }, 0);
+            tl.call(() => {
+                buildingGroup.visible = true;
+                environmentGroup.visible = true;
+                scene.background = exteriorSceneBackground ? exteriorSceneBackground.clone() : new THREE.Color('#9aa9b5');
+                scene.fog = exteriorSceneFog || new THREE.Fog(0x9aa9b5, 75, 190);
+                document.body.classList.remove('interior-focus');
+            }, [], 1.05);
+            tl.to(camera.position, {
                 x: defaultCamPos.x, y: defaultCamPos.y, z: defaultCamPos.z,
-                duration: 1.4, ease: 'power3.inOut'
-            });
-            gsap.to(controls.target, {
+                duration: 1.9, ease: 'power2.inOut'
+            }, 1.2);
+            tl.to(controls.target, {
                 x: defaultTarget.x, y: defaultTarget.y, z: defaultTarget.z,
-                duration: 1.4, ease: 'power3.inOut'
-            });
+                duration: 1.9, ease: 'power2.inOut'
+            }, 1.2);
         }
 
         function closeApartmentDetail() { resetView(); }
@@ -947,15 +1271,46 @@
 
         function toggleLighting() {
             isLightingDay = !isLightingDay;
+            const day = isLightingDay;
             const ambient = scene.getObjectByName('ambient');
             const sun = scene.getObjectByName('sun');
-            if (isLightingDay) {
-                if (ambient) ambient.intensity = 1.1;
-                if (sun) sun.intensity = 2.4;
-            } else {
-                if (ambient) ambient.intensity = 0.55;
-                if (sun) sun.intensity = 1.8;
+            const hemi = scene.getObjectByName('hemi');
+            const fill = scene.getObjectByName('fill');
+            const facade = scene.getObjectByName('facadeFill');
+            const targetBg = new THREE.Color(day ? 0xb8c9d5 : 0x111b2a);
+            const targetFog = new THREE.Color(day ? 0xb8c9d5 : 0x172436);
+            const sunColor = new THREE.Color(day ? 0xffedcf : 0x8298c0);
+            const hemiSky = new THREE.Color(day ? 0xdcecff : 0x526783);
+            const hemiGround = new THREE.Color(day ? 0x756957 : 0x202a35);
+            const fillColor = new THREE.Color(day ? 0xd1e3f2 : 0x526b9a);
+            if (ambient) gsap.to(ambient, { intensity: day ? 0.58 : 0.22, duration: 2.8, ease: 'sine.inOut' });
+            if (sun) {
+                gsap.to(sun, { intensity: day ? 2.0 : 0.10, duration: 2.8, ease: 'sine.inOut' });
+                gsap.to(sun.color, { r: sunColor.r, g: sunColor.g, b: sunColor.b, duration: 2.8, ease: 'sine.inOut' });
+                gsap.to(sun.position, { x: day ? -34 : 18, y: day ? 48 : 16, z: day ? -12 : 12, duration: 2.8, ease: 'sine.inOut' });
             }
+            if (hemi) {
+                gsap.to(hemi, { intensity: day ? 0.72 : 0.32, duration: 2.8, ease: 'sine.inOut' });
+                gsap.to(hemi.color, { r: hemiSky.r, g: hemiSky.g, b: hemiSky.b, duration: 2.8, ease: 'sine.inOut' });
+                gsap.to(hemi.groundColor, { r: hemiGround.r, g: hemiGround.g, b: hemiGround.b, duration: 2.8, ease: 'sine.inOut' });
+            }
+            if (fill) {
+                gsap.to(fill, { intensity: day ? 0.30 : 0.10, duration: 2.8, ease: 'sine.inOut' });
+                gsap.to(fill.color, { r: fillColor.r, g: fillColor.g, b: fillColor.b, duration: 2.8, ease: 'sine.inOut' });
+            }
+            if (facade) gsap.to(facade, { intensity: day ? 12 : 34, duration: 2.8, ease: 'sine.inOut' });
+            if (scene.background && scene.background.isColor) gsap.to(scene.background, { r: targetBg.r, g: targetBg.g, b: targetBg.b, duration: 3.2, ease: 'sine.inOut' });
+            if (scene.fog && scene.fog.color) gsap.to(scene.fog.color, { r: targetFog.r, g: targetFog.g, b: targetFog.b, duration: 3.2, ease: 'sine.inOut' });
+            if (renderer) gsap.to(renderer, { toneMappingExposure: day ? 1.18 : 0.78, duration: 2.8, ease: 'sine.inOut' });
+            (window.streetLampLights || []).forEach(light => gsap.to(light, { intensity: day ? 0 : 4.2, duration: 2.4, ease: 'sine.inOut' }));
+            (window.contextNightWindows || []).forEach((mesh, i) => {
+                if (mesh.material && mesh.material.emissive) {
+                    gsap.to(mesh.material, { emissiveIntensity: day ? 0 : (i % 4 === 0 ? 0.75 : 0.22), duration: 2.5, ease: 'sine.inOut' });
+                }
+            });
+            const icon = document.getElementById('theme-icon');
+            if (icon) icon.setAttribute('data-lucide', day ? 'sun' : 'moon');
+            if (window.lucide) lucide.createIcons();
         }
 
         function toggleBgPanel() {
