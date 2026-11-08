@@ -125,10 +125,18 @@
     .pnlm-control:hover { background-color:rgba(35,47,57,.9) !important; }
     .pnlm-hotspot-base { z-index:5; }
     div.pnlm-hotspot-container div.pnlm-hotspot.custom-hotspot {
-      width:auto !important; height:auto !important; background:none !important; border:0 !important;
-      box-shadow:none !important; display:flex !important; flex-direction:column !important;
-      align-items:center !important; justify-content:center !important;
-      cursor:pointer !important; transform:translate(-50%,-50%) !important; z-index:100 !important;
+      /* Keep the hotspot anchor exactly the same size as the preview icon.
+         The label is positioned independently from this fixed centre point. */
+      position:relative !important;
+      display:block !important;
+      width:48px !important; height:48px !important;
+      min-width:48px !important; min-height:48px !important;
+      padding:0 !important; margin:0 !important;
+      overflow:visible !important;
+      background:none !important; border:0 !important; box-shadow:none !important;
+      cursor:pointer !important;
+      transform:translate(-50%,-50%) !important;
+      z-index:100 !important;
     }
     .hotspot-preview-circle {
       width:48px !important; height:48px !important; border-radius:50% !important;
@@ -143,8 +151,15 @@
       box-shadow:0 8px 25px rgba(0,0,0,.55),0 0 0 7px rgba(185,213,202,.23) !important;
     }
     .hotspot-preview-label {
-      align-self:center !important; width:max-content !important; max-width:160px !important;
-      margin:8px auto 0 !important; text-align:center !important;
+      /* Anchor the label to the icon's true horizontal midpoint, not the
+         intrinsic width of the Pannellum hotspot wrapper. */
+      position:absolute !important;
+      left:50% !important;
+      top:calc(100% + 8px) !important;
+      transform:translateX(-50%) !important;
+      display:block !important;
+      width:max-content !important; max-width:160px !important;
+      margin:0 !important; text-align:center !important;
       background:rgba(8,13,18,.83) !important;
       backdrop-filter:blur(10px) !important; color:#fff !important; font-size:10px !important;
       font-weight:600 !important; letter-spacing:.01em !important; padding:6px 11px !important;
@@ -189,8 +204,12 @@
       .control-cluster { gap:5px; }
       .control-cluster .icon-button { width:37px; height:37px; border-radius:12px; }
       .gyro-button { display:inline-flex; }
+      div.pnlm-hotspot-container div.pnlm-hotspot.custom-hotspot {
+        width:32px !important; height:32px !important;
+        min-width:32px !important; min-height:32px !important;
+      }
       .hotspot-preview-circle { width:32px !important; height:32px !important; border-width:1.7px !important; box-shadow:0 3px 12px rgba(0,0,0,.48),0 0 0 3px rgba(255,255,255,.11) !important; }
-      .hotspot-preview-label { margin-top:5px !important; max-width:112px !important; padding:4px 7px !important; border-radius:7px !important; font-size:9px !important; line-height:1.2 !important; }
+      .hotspot-preview-label { top:calc(100% + 5px) !important; max-width:112px !important; padding:4px 7px !important; border-radius:7px !important; font-size:9px !important; line-height:1.2 !important; }
       .scene-rail-wrap { padding:8px; border-radius:15px; }
       .rail-heading { padding:1px 3px 7px; }
       .scene-card { flex-basis:116px; height:58px; padding:8px; border-radius:10px; }
