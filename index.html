@@ -440,7 +440,31 @@
       });
     }
 
-    
+    function createSceneRail() {
+      const list = $('scene-list');
+      list.innerHTML = '';
+      scenes.forEach((scene, index) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'scene-card';
+        button.dataset.sceneId = String(scene.id);
+        button.style.backgroundImage = `url("${String(scene.panorama_url || '').replace(/"/g, '%22')}")`;
+        button.setAttribute('aria-label', `Explore ${scene.title || `Space ${index + 1}`}`);
+        const number = document.createElement('small');
+        number.className = 'scene-number';
+        number.textContent = String(index + 1).padStart(2, '0');
+        const title = document.createElement('span');
+        title.textContent = scene.title || `Space ${index + 1}`;
+        button.append(number, title);
+        button.addEventListener('click', () => {
+          if (viewerInstance && String(scene.id) !== String(activeSceneId)) {
+            transitionToScene(scene.id);
+          }
+        });
+        list.appendChild(button);
+      });
+      $('rail-count').textContent = `${scenes.length} ${scenes.length === 1 ? 'space' : 'spaces'}`;
+    }
 
     let sceneTransitionToken = 0;
     async function transitionToScene(sceneId) {
