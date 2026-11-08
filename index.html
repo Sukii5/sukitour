@@ -179,6 +179,24 @@
     }
     .gyro-button { display:none; }
     .gyro-button.is-active { border-color:rgba(185,213,202,.75); background:rgba(91,132,116,.42); color:var(--accent-strong); }
+    /* Suppress Pannellum's small per-scene "Loading" panel. Scene changes
+       are handled by the cinematic zoom transition below instead. */
+    .pnlm-load-box, .pnlm-lbox {
+      display:none !important;
+      visibility:hidden !important;
+      opacity:0 !important;
+      pointer-events:none !important;
+    }
+    #panorama-container {
+      transform:scale(1);
+      transform-origin:50% 50%;
+      transition:transform .62s cubic-bezier(.22,.72,.18,1);
+      will-change:transform;
+    }
+    #panorama-container.is-zooming {
+      transform:scale(1.055);
+    }
+
     #loading-overlay {
       position:absolute; inset:0; z-index:100; display:flex; flex-direction:column;
       justify-content:center; align-items:center; gap:13px; padding:24px; text-align:center;
@@ -337,7 +355,7 @@
         const image = new Image();
         image.decoding = 'async';
         image.loading = 'eager';
-        if (index > 0 && 'fetchPriority' in image) image.fetchPriority = 'low';
+        if ('fetchPriority' in image) image.fetchPriority = 'high';
         image.src = url;
         const ready = typeof image.decode === 'function'
           ? image.decode().catch(() => {})
@@ -441,12 +459,42 @@
         button.append(number, title);
         button.addEventListener('click', () => {
           if (viewerInstance && String(scene.id) !== String(activeSceneId)) {
-            viewerInstance.loadScene(scene.id);
+            transitionToScene(scene.id);
           }
         });
         list.appendChild(button);
       });
       $('rail-count').textContent = `${scenes.length} ${scenes.length === 1 ? 'space' : 'spaces'}`;
+    }
+
+    let sceneTransitionToken = 0;
+    async function transitionToScene(sceneId) {
+      if (!viewerInstance || !sceneId || String(sceneId) === String(activeSceneId)) return;
+
+      const targetScene = scenes.find(scene => String(scene.id) === String(sceneId));
+      const imageReady = targetScene && preloadedImages.get(targetScene.panorama_url);
+      const container = $('panorama-container');
+      const token = ++sceneTransitionToken;
+
+      // Start the cinematic push-in immediately while the target panorama
+      // finishes decoding in the background cache.
+      container.classList.remove('is-zooming');
+      void container.offsetWidth;
+      container.classList.add('is-zooming');
+
+      try {
+        if (imageReady) await imageReady;
+        if (token !== sceneTransitionToken || !viewerInstance) return;
+        viewerInstance.loadScene(sceneId);
+      } catch (error) {
+        console.warn('Preloaded panorama was unavailable; loading normally:', error);
+        if (token === sceneTransitionToken && viewerInstance) viewerInstance.loadScene(sceneId);
+      }
+
+      // Safety fallback for a failed/unsupported scenechangefadedone event.
+      window.setTimeout(() => {
+        if (token === sceneTransitionToken) container.classList.remove('is-zooming');
+      }, 1900);
     }
 
     function createPreviewHotspot(hotSpotDiv, args) {
@@ -465,7 +513,7 @@
       hotSpotDiv.setAttribute('aria-label', `Navigate to ${args.title || 'another space'}`);
       hotSpotDiv.addEventListener('click', (event) => {
         event.stopPropagation();
-        if (viewerInstance && args.targetSceneId) viewerInstance.loadScene(args.targetSceneId);
+        if (viewerInstance && args.targetSceneId) transitionToScene(args.targetSceneId);
       });
     }
 
@@ -576,7 +624,10 @@
         viewerInstance.on('scenechange', (sceneId) => {
           isLoadingScene = true;
           updateSceneUI(sceneId);
-          // No full-screen loader on scene changes; Pannellum's crossfade handles the transition.
+        });
+        viewerInstance.on('scenechangefadedone', () => {
+          $('panorama-container').classList.remove('is-zooming');
+          isLoadingScene = false;
         });
         viewerInstance.on('error', (error) => {
           console.error('Panorama viewer error:', error);
