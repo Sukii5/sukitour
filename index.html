@@ -64,6 +64,52 @@
       max-width: 600px;
       word-break: break-word;
     }
+
+    /* ---------------------------------------------------------------- */
+    /* CUSTOM CIRCULAR PREVIEW HOTSPOT STYLES                           */
+    /* ---------------------------------------------------------------- */
+    .custom-hotspot {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      cursor: pointer;
+      transform: translate(-50%, -50%);
+      transition: transform 0.2s ease, opacity 0.2s ease;
+      z-index: 5;
+    }
+    .custom-hotspot:hover {
+      transform: translate(-50%, -50%) scale(1.15);
+    }
+    .hotspot-circle {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      border: 3px solid #ffffff;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), 0 0 10px rgba(59, 130, 246, 0.5);
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-color: #1a1a1a;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .custom-hotspot:hover .hotspot-circle {
+      border-color: #3b82f6;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.7), 0 0 14px rgba(59, 130, 246, 0.8);
+    }
+    .hotspot-label {
+      margin-top: 6px;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(4px);
+      color: #ffffff;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      white-space: nowrap;
+      pointer-events: none;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+    }
   </style>
 </head>
 <body>
@@ -84,6 +130,35 @@
 
     const urlParams = new URLSearchParams(window.location.search);
     const tourId = urlParams.get('id');
+
+    let viewerInstance = null;
+
+    // Custom renderer for Pannellum hotspots
+    function createPreviewHotspot(hotSpotDiv, args) {
+      hotSpotDiv.classList.add('custom-hotspot');
+
+      // 1. Circular preview thumbnail container
+      const circleEl = document.createElement('div');
+      circleEl.classList.add('hotspot-circle');
+      if (args.imageUrl) {
+        circleEl.style.backgroundImage = `url('${args.imageUrl}')`;
+      }
+
+      // 2. Room text label
+      const labelEl = document.createElement('div');
+      labelEl.classList.add('hotspot-label');
+      labelEl.innerText = args.title || 'Navigate';
+
+      hotSpotDiv.appendChild(circleEl);
+      hotSpotDiv.appendChild(labelEl);
+
+      // Click event to trigger scene navigation inside Pannellum
+      hotSpotDiv.addEventListener('click', () => {
+        if (viewerInstance && args.targetSceneId) {
+          viewerInstance.loadScene(args.targetSceneId);
+        }
+      });
+    }
 
     async function loadTour() {
       const statusText = document.getElementById('status-text');
@@ -125,29 +200,37 @@
           throw new Error('No scenes found for this tour ID.');
         }
 
+        // Map scene IDs to scene details for thumbnail and title lookups
+        const sceneMap = {};
+        scenesData.forEach(s => {
+          sceneMap[s.id] = {
+            title: s.title,
+            imageUrl: s.panorama_url
+          };
+        });
+
         // 3. Construct Pannellum multi-scene structure
         const pannellumScenes = {};
         const firstSceneId = scenesData[0].id;
-
-        // Quick title lookup map for hotspots
-        const sceneTitleMap = {};
-        scenesData.forEach(s => {
-          sceneTitleMap[s.id] = s.title;
-        });
 
         scenesData.forEach((scene) => {
           const rawHotspots = scene.hotspots || [];
           const formattedHotspots = [];
 
-          // Map JSONB hotspots to Pannellum hotspot parameters
           rawHotspots.forEach(hs => {
             const targetSceneId = hs.targetSceneId || hs.target_scene_id || hs.sceneId;
+            const targetScene = sceneMap[targetSceneId] || {};
+
             formattedHotspots.push({
               pitch: hs.pitch || 0,
               yaw: hs.yaw || 0,
-              type: "scene",
-              text: hs.text || sceneTitleMap[targetSceneId] || "Navigate",
-              sceneId: targetSceneId
+              type: "custom",
+              createTooltipFunc: createPreviewHotspot,
+              createTooltipArgs: {
+                title: hs.text || targetScene.title || "Navigate",
+                imageUrl: targetScene.imageUrl || "",
+                targetSceneId: targetSceneId
+              }
             });
           });
 
@@ -170,7 +253,7 @@
         }, 300);
 
         // 4. Initialize Viewer
-        pannellum.viewer('panorama-container', {
+        viewerInstance = pannellum.viewer('panorama-container', {
           "default": {
             "firstScene": firstSceneId,
             "autoRotate": -2,
