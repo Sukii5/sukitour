@@ -75,16 +75,13 @@
   <div id="panorama-container"></div>
 
   <script>
-    // ------------------------------------------------------------------
-    // CONFIGURATION: Replace with your project details
-    // ------------------------------------------------------------------
+    // Configuration pointing to your primary Supabase project
     const SUPABASE_URL = 'https://pcfdrglvvmlrjzhwuvze.supabase.co';
-    const SUPABASE_ANON_KEY = 'sb_publishable_btfQ4JKEiDvRm89qO8TZFg_n1rBqVGz';
-    const TABLE_NAME = 'tours'; // Name of your Supabase table
+    const SUPABASE_ANON_KEY = 'sb_publishable_hdNe9WHMBDY-UwIHsaSqiA_n4pZ7VVC';
+    const TABLE_NAME = 'tours';
 
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // Get tour ID from URL params (e.g., viewer.html?id=123)
     const urlParams = new URLSearchParams(window.location.search);
     const tourId = urlParams.get('id');
 
@@ -102,7 +99,6 @@
       }
 
       try {
-        // Query Supabase table for target tour entry
         const { data, error } = await supabaseClient
           .from(TABLE_NAME)
           .select('*')
@@ -113,16 +109,22 @@
           throw new Error(error ? error.message : 'Tour record not found.');
         }
 
-        // Hide overlay once fetched
         document.getElementById('loading-overlay').style.opacity = '0';
         setTimeout(() => {
           document.getElementById('loading-overlay').style.display = 'none';
         }, 300);
 
-        // Initialize Pannellum viewer
+        // NOTE: Replace 'image_url' below with your exact Supabase column name if it differs 
+        // (e.g., data.url, data.image, data.file_path)
+        const panoramaSource = data.image_url || data.url || data.image;
+
+        if (!panoramaSource) {
+          throw new Error('The database record was found, but no image link field was populated.');
+        }
+
         pannellum.viewer('panorama-container', {
           "type": "equirectangular",
-          "panorama": data.image_url, // Column holding the public image URL
+          "panorama": panoramaSource,
           "autoLoad": true,
           "autoRotate": -2,
           "compass": false,
