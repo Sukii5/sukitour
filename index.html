@@ -56,7 +56,7 @@
       margin-bottom: 12px;
     }
     @keyframes spin {
-      to { transform: rotate(360deg); }
+      to { rotate: 360deg; }
     }
     #error-message {
       color: #ef4444;
@@ -70,7 +70,7 @@
 
   <div id="loading-overlay">
     <div class="spinner" id="spinner"></div>
-    <p id="status-text">Fetching tour data...</p>
+    <p id="status-text">Fetching multi-scene tour data...</p>
     <p id="error-message"></p>
   </div>
 
@@ -111,37 +111,31 @@
           throw new Error(tourError ? tourError.message : 'Tour record not found in tours table.');
         }
 
-        console.log("Fetched Tour Data:", tourData);
         const projectTitle = tourData.title || tourData.name || "360 Tour Presentation";
         document.getElementById('page-title').innerText = projectTitle;
 
-        // 2. Fetch corresponding Scene(s) from 'scenes' table linked to this tour
-        let sceneData = null;
-        
-        const { data: scenesByTourId } = await supabaseClient
+        // 2. Fetch all scenes belonging to this tour
+        const { data: scenesData, error: scenesError } = await supabaseClient
           .from('scenes')
           .select('*')
           .eq('tour_id', tourId);
 
-        if (scenesByTourId && scenesByTourId.length > 0) {
-          sceneData = scenesByTourId[0];
-        } else {
-          const { data: sceneById } = await supabaseClient
-            .from('scenes')
-            .select('*')
-            .eq('id', tourId)
-            .single();
-          
-          if (sceneById) {
-            sceneData = sceneById;
-          }
+        if (scenesError || !scenesData || scenesData.length === 0) {
+          throw new Error('No scenes found for this tour in the scenes table.');
         }
 
-        if (!sceneData) {
-          throw new Error('No scene record found in the scenes table for this tour ID.');
-        }
+        console.log("Fetched All Tour Scenes:", scenesData);
 
-        console.log("Fetched Scene Data:", sceneData);
+        // 3. Fetch walkthroughs/hotlinks if available in your database schema
+        let walkthroughsData = [];
+        const { data: wtData } = await supabaseClient
+          .from('walkthroughs')
+          .select('*')
+          .eq('tour_id', tourId);
+        
+        if (wtData) {
+          walkthroughsData = wtData;
+        }
 
         // Hide loading screen
         document.getElementById('loading-overlay').style.opacity = '0';
@@ -149,47 +143,74 @@
           document.getElementById('loading-overlay').style.display = 'none';
         }, 300);
 
-        // 3. Explicit check for your exact scene column names
-        let filePath = sceneData.image_path || sceneData.file_path || sceneData.panorama || sceneData.file_name || sceneData.filename || sceneData.image || sceneData.url || sceneData.file || sceneData.path;
+        // 4. Build Pannellum multi-scene configuration object
+        let pannellumScenes = {};
+        let firstSceneId = null;
 
-        // Fallback auto-search loop if none of the above matched
-        if (!filePath) {
-          for (const key in sceneData) {
-            const val = sceneData[key];
-            if (typeof val === 'string' && (val.startsWith('http') || val.includes('.jpg') || val.includes('.png') || val.includes('.webp') || val.includes('/'))) {
-              if (key !== 'id' && key !== 'tour_id' && key !== 'title' && key !== 'name') {
-                filePath = val;
-                break;
+        scenesData.forEach((scene, index) => {
+          const sceneKey = scene.id || `scene_${index}`;
+          if (index === 0) firstSceneId = sceneKey;
+
+          // Resolve image path/URL from scene
+          let filePath = scene.image_path || scene.file_path || scene.panorama || scene.file_name || scene.filename || scene.image || scene.url || scene.file || scene.path;
+          
+          if (!filePath) {
+            for (const key in scene) {
+              const val = scene[key];
+              if (typeof val === 'string' && (val.startsWith('http') || val.includes('.jpg') || val.includes('.png') || val.includes('.webp') || val.includes('/'))) {
+                if (key !== 'id' && key !== 'tour_id' && key !== 'title' && key !== 'name') {
+                  filePath = val;
+                  break;
+                }
               }
             }
           }
-        }
 
-        let panoramaSource = '';
-        if (filePath && filePath.startsWith('http')) {
-          panoramaSource = filePath;
-        } else if (filePath) {
-          const { data: publicURLData } = supabaseClient
-            .storage
-            .from(STORAGE_BUCKET)
-            .getPublicUrl(filePath);
-            
-          panoramaSource = publicURLData.publicUrl;
-        } else {
-          throw new Error('Could not identify image path/filename column in the scene record. Check browser console (F12) to see columns.');
-        }
+          let panoramaUrl = '';
+          if (filePath && filePath.startsWith('http')) {
+            panoramaUrl = filePath;
+          } else if (filePath) {
+            const { data: publicURLData } = supabaseClient
+              .storage
+              .from(STORAGE_BUCKET)
+              .getPublicUrl(filePath);
+            panoramaUrl = publicURLData.publicUrl;
+          }
 
-        // 4. Initialize Pannellum Viewer
+          // Build hotspots array for this scene
+          let sceneHotspots = [];
+          
+          // Map walkthrough connections if stored in the walkthroughs table
+          const relatedHotspots = walkthroughsData.filter(w => w.scene_id === scene.id || w.from_scene_id === scene.id);
+          relatedHotspots.forEach(spot => {
+            sceneHotspots.push({
+              "pitch": spot.pitch || 0,
+              "yaw": spot.yaw || 0,
+              "type": "scene",
+              "text": spot.title || spot.text || "Next Room",
+              "sceneId": spot.target_scene_id || spot.to_scene_id
+            });
+          });
+
+          pannellumScenes[sceneKey] = {
+            "title": scene.title || scene.name || `Scene ${index + 1}`,
+            "type": "equirectangular",
+            "panorama": panoramaUrl,
+            "autoLoad": true,
+            "hotSpots": sceneHotspots
+          };
+        });
+
+        // 5. Initialize Pannellum Multi-Scene Viewer
         pannellum.viewer('panorama-container', {
-          "type": "equirectangular",
-          "panorama": panoramaSource,
-          "autoLoad": true,
-          "autoRotate": -2,
-          "compass": false,
-          "title": projectTitle,
-          "author": tourData.author || "Panosphere Studio",
-          "showZoomCtrl": true,
-          "showFullscreenCtrl": true
+          "default": {
+            "firstScene": firstSceneId,
+            "autoRotate": -2,
+            "showZoomCtrl": true,
+            "showFullscreenCtrl": true,
+            "author": tourData.author || "Panosphere Studio"
+          },
+          "scenes": pannellumScenes
         });
 
       } catch (err) {
