@@ -79,8 +79,7 @@
   <script>
     const SUPABASE_URL = 'https://pcfdrglvvmlrjzhwuvze.supabase.co';
     const SUPABASE_ANON_KEY = 'sb_publishable_btfQ4JKEiDvRm89qO8TZFg_n1rBqVGz';
-    const TABLE_NAME = 'tours';
-    const STORAGE_BUCKET = 'tours';
+    const STORAGE_BUCKET = 'panoramas';
 
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -101,45 +100,70 @@
       }
 
       try {
-        const { data, error } = await supabaseClient
-          .from(TABLE_NAME)
+        // 1. Fetch Tour details from 'tours' table
+        const { data: tourData, error: tourError } = await supabaseClient
+          .from('tours')
           .select('*')
           .eq('id', tourId)
           .single();
 
-        if (error || !data) {
-          throw new Error(error ? error.message : 'Tour record not found in database.');
+        if (tourError || !tourData) {
+          throw new Error(tourError ? tourError.message : 'Tour record not found in tours table.');
         }
 
-        // --- DEBUG INSPECTION ---
-        // Logs the entire row columns/data to your browser console (Press F12 to check)
-        console.log("Fetched Supabase Row Data:", data);
-
-        // Dynamically update the website page title
-        const projectTitle = data.title || data.name || data.project_name || "360 Tour Presentation";
+        console.log("Fetched Tour Data:", tourData);
+        const projectTitle = tourData.title || tourData.name || "360 Tour Presentation";
         document.getElementById('page-title').innerText = projectTitle;
 
+        // 2. Fetch corresponding Scene(s) from 'scenes' table linked to this tour
+        let sceneData = null;
+        
+        const { data: scenesByTourId } = await supabaseClient
+          .from('scenes')
+          .select('*')
+          .eq('tour_id', tourId);
+
+        if (scenesByTourId && scenesByTourId.length > 0) {
+          sceneData = scenesByTourId[0];
+        } else {
+          // Fallback check if scenes table relates directly via id
+          const { data: sceneById } = await supabaseClient
+            .from('scenes')
+            .select('*')
+            .eq('id', tourId)
+            .single();
+          
+          if (sceneById) {
+            sceneData = sceneById;
+          }
+        }
+
+        if (!sceneData) {
+          throw new Error('No scene record found in the scenes table for this tour ID.');
+        }
+
+        console.log("Fetched Scene Data:", sceneData);
+
+        // Hide loading screen
         document.getElementById('loading-overlay').style.opacity = '0';
         setTimeout(() => {
           document.getElementById('loading-overlay').style.display = 'none';
         }, 300);
 
-        // Automatically loop through properties to find a valid image URL or storage path string
+        // 3. Find file reference from scene record
         let filePath = '';
-        for (const key in data) {
-          const val = data[key];
+        for (const key in sceneData) {
+          const val = sceneData[key];
           if (typeof val === 'string' && (val.startsWith('http') || val.includes('.jpg') || val.includes('.png') || val.includes('.webp') || val.includes('/'))) {
-            // Skip the ID field or title field if they accidentally match
-            if (key !== 'id' && key !== 'title' && key !== 'name') {
+            if (key !== 'id' && key !== 'tour_id' && key !== 'title' && key !== 'name') {
               filePath = val;
               break;
             }
           }
         }
 
-        // Fallback to explicit common keys if auto-loop missed it
         if (!filePath) {
-          filePath = data.file_path || data.file || data.image_url || data.url || data.image || data.path || data.filename;
+          filePath = sceneData.file_path || sceneData.file || sceneData.image_url || sceneData.url || sceneData.image || sceneData.path || sceneData.filename;
         }
 
         let panoramaSource = '';
@@ -153,9 +177,10 @@
             
           panoramaSource = publicURLData.publicUrl;
         } else {
-          throw new Error(`Could not find a file reference column. Check your browser console (F12) to see all columns returned for row ID: ${tourId}`);
+          throw new Error('Could not identify image path/filename column in the scene record.');
         }
 
+        // 4. Initialize Pannellum Viewer
         pannellum.viewer('panorama-container', {
           "type": "equirectangular",
           "panorama": panoramaSource,
@@ -163,7 +188,7 @@
           "autoRotate": -2,
           "compass": false,
           "title": projectTitle,
-          "author": data.author || "Panosphere Studio",
+          "author": tourData.author || "Panosphere Studio",
           "showZoomCtrl": true,
           "showFullscreenCtrl": true
         });
