@@ -143,13 +143,17 @@
       box-shadow:0 8px 25px rgba(0,0,0,.55),0 0 0 7px rgba(185,213,202,.23) !important;
     }
     .hotspot-preview-label {
-      margin-top:8px !important; background:rgba(8,13,18,.83) !important;
+      align-self:center !important; width:max-content !important; max-width:160px !important;
+      margin:8px auto 0 !important; text-align:center !important;
+      background:rgba(8,13,18,.83) !important;
       backdrop-filter:blur(10px) !important; color:#fff !important; font-size:10px !important;
       font-weight:600 !important; letter-spacing:.01em !important; padding:6px 11px !important;
       border-radius:8px !important; border:1px solid rgba(255,255,255,.18) !important;
       white-space:nowrap !important; pointer-events:none !important;
       box-shadow:0 3px 12px rgba(0,0,0,.25) !important;
     }
+    .gyro-button { display:none; }
+    .gyro-button.is-active { border-color:rgba(185,213,202,.75); background:rgba(91,132,116,.42); color:var(--accent-strong); }
     #loading-overlay {
       position:absolute; inset:0; z-index:100; display:flex; flex-direction:column;
       justify-content:center; align-items:center; gap:13px; padding:24px; text-align:center;
@@ -184,12 +188,18 @@
       #scene-count { font-size:10px; }
       .control-cluster { gap:5px; }
       .control-cluster .icon-button { width:37px; height:37px; border-radius:12px; }
+      .gyro-button { display:inline-flex; }
+      .hotspot-preview-circle { width:32px !important; height:32px !important; border-width:1.7px !important; box-shadow:0 3px 12px rgba(0,0,0,.48),0 0 0 3px rgba(255,255,255,.11) !important; }
+      .hotspot-preview-label { margin-top:5px !important; max-width:112px !important; padding:4px 7px !important; border-radius:7px !important; font-size:9px !important; line-height:1.2 !important; }
       .scene-rail-wrap { padding:8px; border-radius:15px; }
       .rail-heading { padding:1px 3px 7px; }
       .scene-card { flex-basis:116px; height:58px; padding:8px; border-radius:10px; }
       .scene-card span { font-size:10px; }
       .pnlm-controls { bottom:132px !important; right:12px !important; transform:scale(.88); transform-origin:bottom right; }
       .brand-footer { display:none; }
+    }
+    @media (pointer:coarse) {
+      .gyro-button { display:inline-flex; }
     }
     @media (max-height:520px) and (min-width:641px) {
       .topbar { padding-top:12px; }
@@ -253,6 +263,9 @@
         <button class="icon-button" id="zoom-in" type="button" aria-label="Zoom in" title="Zoom in">
           <svg viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="7.3"/><path d="M16.2 16.2 21 21M7.5 10.8h6.6M10.8 7.5v6.6"/></svg>
         </button>
+        <button class="icon-button gyro-button" id="gyro-toggle" type="button" aria-label="Enable motion controls" title="Enable motion controls">
+          <svg viewBox="0 0 24 24"><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/><circle cx="12" cy="12" r="6.5"/><path d="m9.5 12 1.7 1.7 3.5-3.5"/></svg>
+        </button>
       </div>
     </div>
     <section class="scene-rail-wrap" aria-label="Tour scenes">
@@ -282,8 +295,76 @@
     let scenes = [];
     let activeSceneId = null;
     let isLoadingScene = false;
+    let preloadedImages = new Map();
+    let gyroActive = false;
 
     const $ = (id) => document.getElementById(id);
+
+    // Warm panorama assets into the browser cache without blocking the first scene.
+    function preloadPanoramas(sceneList) {
+      const urls = [...new Set(sceneList.map(scene => scene.panorama_url).filter(Boolean))];
+      urls.forEach((url, index) => {
+        if (preloadedImages.has(url)) return;
+        const image = new Image();
+        image.decoding = 'async';
+        image.loading = 'eager';
+        if (index > 0 && 'fetchPriority' in image) image.fetchPriority = 'low';
+        image.src = url;
+        const ready = typeof image.decode === 'function'
+          ? image.decode().catch(() => {})
+          : new Promise(resolve => { image.onload = resolve; image.onerror = resolve; });
+        preloadedImages.set(url, ready);
+      });
+    }
+
+    function isMobileDevice() {
+      return window.matchMedia('(max-width: 640px)').matches || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    }
+
+    async function enableGyro(fromUserGesture = false) {
+      if (!viewerInstance || !isMobileDevice()) return;
+      const orientation = window.DeviceOrientationEvent;
+      if (!orientation) {
+        $('gyro-toggle').title = 'Motion controls are not supported on this device';
+        return;
+      }
+      try {
+        if (typeof orientation.requestPermission === 'function') {
+          if (!fromUserGesture) {
+            $('gyro-toggle').classList.remove('is-active');
+            $('gyro-toggle').title = 'Tap to allow motion controls';
+            return;
+          }
+          const permission = await orientation.requestPermission();
+          if (permission !== 'granted') throw new Error('Motion permission was not granted');
+        }
+        if (typeof viewerInstance.startOrientation === 'function') {
+          viewerInstance.startOrientation();
+          gyroActive = true;
+          $('gyro-toggle').classList.add('is-active');
+          $('gyro-toggle').title = 'Motion controls enabled';
+          $('gyro-toggle').setAttribute('aria-label', 'Disable motion controls');
+        }
+      } catch (error) {
+        gyroActive = false;
+        $('gyro-toggle').classList.remove('is-active');
+        $('gyro-toggle').title = 'Tap to retry motion permission';
+        console.info('Device orientation is not active:', error);
+      }
+    }
+
+    function toggleGyro() {
+      if (!viewerInstance) return;
+      if (gyroActive && typeof viewerInstance.stopOrientation === 'function') {
+        viewerInstance.stopOrientation();
+        gyroActive = false;
+        $('gyro-toggle').classList.remove('is-active');
+        $('gyro-toggle').title = 'Enable motion controls';
+        $('gyro-toggle').setAttribute('aria-label', 'Enable motion controls');
+      } else {
+        enableGyro(true);
+      }
+    }
 
     function showError(message) {
       $('spinner').style.display = 'none';
@@ -384,6 +465,8 @@
         }
 
         scenes = scenesData;
+        // Start caching every panorama in the background so scene changes feel immediate.
+        preloadPanoramas(scenesData);
         const sceneMap = {};
         scenesData.forEach(scene => {
           sceneMap[scene.id] = { title: scene.title, imageUrl: scene.panorama_url };
@@ -415,7 +498,7 @@
             panorama: scene.panorama_url,
             pitch: Number(scene.initial_pitch) || 0,
             yaw: Number(scene.initial_yaw) || 0,
-            hfov: Number(scene.initial_hfov) || 100,
+            hfov: Math.max(110, Math.min(120, Number(scene.initial_hfov) || 110)),
             autoLoad: true,
             hotSpots: formattedHotspots
           };
@@ -438,6 +521,8 @@
             showFullscreenCtrl: false,
             showControls: false,
             orientationOnByDefault: true,
+            maxHfov: 120,
+            // A wider field of view starts each room zoomed out for more context.
             sceneFadeDuration: 1200,
             compass: false,
             keyboardZoom: true,
@@ -452,13 +537,14 @@
           hideLoader();
           isLoadingScene = false;
           updateSceneUI(viewerInstance.getScene());
+          // Enforce a comfortably zoomed-out starting view even if older scene data used a tighter HFOV.
+          if (viewerInstance.getHfov() < 110) viewerInstance.setHfov(110, 0);
+          if (isMobileDevice()) enableGyro(false);
         });
         viewerInstance.on('scenechange', (sceneId) => {
           isLoadingScene = true;
-          $('scene-indicator').textContent = `Entering ${sceneMap[sceneId]?.title || 'new space'}…`;
-          $('scene-indicator').classList.add('visible');
           updateSceneUI(sceneId);
-          window.setTimeout(() => $('scene-indicator').classList.remove('visible'), 850);
+          // No full-screen loader on scene changes; Pannellum's crossfade handles the transition.
         });
         viewerInstance.on('error', (error) => {
           console.error('Panorama viewer error:', error);
@@ -479,13 +565,14 @@
     }
 
     $('zoom-in').addEventListener('click', () => adjustZoom(-8));
+    $('gyro-toggle').addEventListener('click', toggleGyro);
     $('zoom-out').addEventListener('click', () => adjustZoom(8));
     $('reset-view').addEventListener('click', () => {
       if (!viewerInstance) return;
       const scene = scenes.find(item => String(item.id) === String(activeSceneId));
       viewerInstance.setPitch(Number(scene?.initial_pitch) || 0, 450);
       viewerInstance.setYaw(Number(scene?.initial_yaw) || 0, 450);
-      viewerInstance.setHfov(Number(scene?.initial_hfov) || 100, 450);
+      viewerInstance.setHfov(Math.max(110, Math.min(120, Number(scene?.initial_hfov) || 110)), 450);
     });
     $('fullscreen-button').addEventListener('click', () => {
       if (!viewerInstance) return;
