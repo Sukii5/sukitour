@@ -535,7 +535,7 @@
         if (tourError || !tourData) throw new Error(tourError ? tourError.message : 'Tour project not found.');
 
         const projectTitle = tourData.title || 'Panosphere Studio';
-        document.title = `${projectTitle} · Panosphere`;
+        document.title = `${projectTitle}`;
         $('tour-title').textContent = projectTitle;
 
         const { data: scenesData, error: scenesError } = await supabaseClient
