@@ -68,6 +68,14 @@
     /* ---------------------------------------------------------------- */
     /* CUSTOM CIRCULAR PREVIEW HOTSPOT STYLES                           */
     /* ---------------------------------------------------------------- */
+    /* Force Pannellum container wrapper to allow custom hotspot sizing */
+    .pnm-hotspot-container, .pnm-hotspot {
+      width: auto !important;
+      height: auto !important;
+      background: transparent !important;
+      border: none !important;
+    }
+
     .custom-hotspot {
       display: flex;
       flex-direction: column;
@@ -85,27 +93,27 @@
       height: 64px;
       border-radius: 50%;
       border: 3px solid #ffffff;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), 0 0 10px rgba(59, 130, 246, 0.5);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6), 0 0 12px rgba(59, 130, 246, 0.6);
       background-size: cover;
       background-position: center;
       background-repeat: no-repeat;
-      background-color: #1a1a1a;
+      background-color: #222222;
       transition: border-color 0.2s ease, box-shadow 0.2s ease;
     }
     .custom-hotspot:hover .hotspot-circle {
       border-color: #3b82f6;
-      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.7), 0 0 14px rgba(59, 130, 246, 0.8);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.8), 0 0 16px rgba(59, 130, 246, 0.9);
     }
     .hotspot-label {
       margin-top: 6px;
-      background: rgba(0, 0, 0, 0.75);
+      background: rgba(0, 0, 0, 0.8);
       backdrop-filter: blur(4px);
       color: #ffffff;
       font-size: 12px;
       font-weight: 600;
       padding: 4px 10px;
       border-radius: 12px;
-      border: 1px solid rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.2);
       white-space: nowrap;
       pointer-events: none;
       box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
@@ -218,7 +226,8 @@
           const formattedHotspots = [];
 
           rawHotspots.forEach(hs => {
-            const targetSceneId = hs.targetSceneId || hs.target_scene_id || hs.sceneId;
+            // Updated key matching: check hs.id (used by your DB schema) first
+            const targetSceneId = hs.id || hs.targetSceneId || hs.target_scene_id || hs.sceneId;
             const targetScene = sceneMap[targetSceneId] || {};
 
             formattedHotspots.push({
