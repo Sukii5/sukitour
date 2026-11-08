@@ -564,17 +564,7 @@
           if (viewerInstance.getHfov() < 110) viewerInstance.setHfov(110, 0);
           if (isMobileDevice()) enableGyro(false);
         });
-        viewerInstance.on('scenechange', (sceneId) => {
-          isLoadingScene = true;
-          updateSceneUI(sceneId);
-        });
-        viewerInstance.on('scenechangefadedone', () => {
-          $('panorama-container').classList.remove('is-zooming');
-          isLoadingScene = false;
-        });
-        viewerInstance.on('error', (error) => {
-          console.error('Panorama viewer error:', error);
-        });
+       
         updateSceneUI(firstSceneId);
         $('interaction-hint').classList.remove('hidden');
         window.setTimeout(() => $('interaction-hint').classList.add('hidden'), 6500);
