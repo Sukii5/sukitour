@@ -273,7 +273,6 @@
       <div class="brand-copy">
         <div class="eyebrow">Panosphere · Virtual experience</div>
         <div id="tour-title">Loading tour…</div>
-        
       </div>
     </div>
     <div class="top-actions">
@@ -529,7 +528,7 @@
         return;
       }
 
-      const projectTitle = tourData.title;
+      const projectTitle = tourData.title || 'Panosphere Studio';
         document.title = `${projectTitle}`;
         $('tour-title').textContent = projectTitle;
 
