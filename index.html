@@ -56,7 +56,7 @@
       margin-bottom: 12px;
     }
     @keyframes spin {
-      to { rotate: 360deg; }
+      to { transform: rotate(360deg); }
     }
     #error-message {
       color: #ef4444;
@@ -70,7 +70,7 @@
 
   <div id="loading-overlay">
     <div class="spinner" id="spinner"></div>
-    <p id="status-text">Fetching multi-scene tour data...</p>
+    <p id="status-text">Loading tour project...</p>
     <p id="error-message"></p>
   </div>
 
@@ -79,7 +79,6 @@
   <script>
     const SUPABASE_URL = 'https://pcfdrglvvmlrjzhwuvze.supabase.co';
     const SUPABASE_ANON_KEY = 'sb_publishable_btfQ4JKEiDvRm89qO8TZFg_n1rBqVGz';
-    const STORAGE_BUCKET = 'panoramas';
 
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -94,13 +93,13 @@
       if (!tourId) {
         spinner.style.display = 'none';
         statusText.style.display = 'none';
-        errorMessage.innerText = 'No tour ID provided in URL parameters (e.g., ?id=YOUR_TOUR_ID).';
+        errorMessage.innerText = 'No tour ID provided in URL parameters (e.g., https://suki-tour.vercel.app/?id=YOUR_TOUR_ID).';
         errorMessage.style.display = 'block';
         return;
       }
 
       try {
-        // 1. Fetch Tour details from 'tours' table
+        // 1. Fetch Tour Project Title
         const { data: tourData, error: tourError } = await supabaseClient
           .from('tours')
           .select('*')
@@ -108,34 +107,61 @@
           .single();
 
         if (tourError || !tourData) {
-          throw new Error(tourError ? tourError.message : 'Tour record not found in tours table.');
+          throw new Error(tourError ? tourError.message : 'Tour project not found.');
         }
 
-        const projectTitle = tourData.title || tourData.name || "360 Tour Presentation";
+        const projectTitle = tourData.title || "Panosphere Studio";
+        document.title = projectTitle;
         document.getElementById('page-title').innerText = projectTitle;
 
-        // 2. Fetch all scenes belonging to this tour
+        // 2. Fetch all scenes belonging to this tour_id ordered by order_index
         const { data: scenesData, error: scenesError } = await supabaseClient
           .from('scenes')
           .select('*')
-          .eq('tour_id', tourId);
+          .eq('tour_id', tourId)
+          .order('order_index', { ascending: true });
 
         if (scenesError || !scenesData || scenesData.length === 0) {
-          throw new Error('No scenes found for this tour in the scenes table.');
+          throw new Error('No scenes found for this tour ID.');
         }
 
-        console.log("Fetched All Tour Scenes:", scenesData);
+        // 3. Construct Pannellum multi-scene structure
+        const pannellumScenes = {};
+        const firstSceneId = scenesData[0].id;
 
-        // 3. Fetch walkthroughs/hotlinks if available in your database schema
-        let walkthroughsData = [];
-        const { data: wtData } = await supabaseClient
-          .from('walkthroughs')
-          .select('*')
-          .eq('tour_id', tourId);
-        
-        if (wtData) {
-          walkthroughsData = wtData;
-        }
+        // Quick title lookup map for hotspots
+        const sceneTitleMap = {};
+        scenesData.forEach(s => {
+          sceneTitleMap[s.id] = s.title;
+        });
+
+        scenesData.forEach((scene) => {
+          const rawHotspots = scene.hotspots || [];
+          const formattedHotspots = [];
+
+          // Map JSONB hotspots to Pannellum hotspot parameters
+          rawHotspots.forEach(hs => {
+            const targetSceneId = hs.targetSceneId || hs.target_scene_id || hs.sceneId;
+            formattedHotspots.push({
+              pitch: hs.pitch || 0,
+              yaw: hs.yaw || 0,
+              type: "scene",
+              text: hs.text || sceneTitleMap[targetSceneId] || "Navigate",
+              sceneId: targetSceneId
+            });
+          });
+
+          pannellumScenes[scene.id] = {
+            title: scene.title || "Room",
+            type: "equirectangular",
+            panorama: scene.panorama_url,
+            pitch: scene.initial_pitch || 0,
+            yaw: scene.initial_yaw || 0,
+            hfov: scene.initial_hfov || 100,
+            autoLoad: true,
+            hotSpots: formattedHotspots
+          };
+        });
 
         // Hide loading screen
         document.getElementById('loading-overlay').style.opacity = '0';
@@ -143,72 +169,15 @@
           document.getElementById('loading-overlay').style.display = 'none';
         }, 300);
 
-        // 4. Build Pannellum multi-scene configuration object
-        let pannellumScenes = {};
-        let firstSceneId = null;
-
-        scenesData.forEach((scene, index) => {
-          const sceneKey = scene.id || `scene_${index}`;
-          if (index === 0) firstSceneId = sceneKey;
-
-          // Resolve image path/URL from scene
-          let filePath = scene.image_path || scene.file_path || scene.panorama || scene.file_name || scene.filename || scene.image || scene.url || scene.file || scene.path;
-          
-          if (!filePath) {
-            for (const key in scene) {
-              const val = scene[key];
-              if (typeof val === 'string' && (val.startsWith('http') || val.includes('.jpg') || val.includes('.png') || val.includes('.webp') || val.includes('/'))) {
-                if (key !== 'id' && key !== 'tour_id' && key !== 'title' && key !== 'name') {
-                  filePath = val;
-                  break;
-                }
-              }
-            }
-          }
-
-          let panoramaUrl = '';
-          if (filePath && filePath.startsWith('http')) {
-            panoramaUrl = filePath;
-          } else if (filePath) {
-            const { data: publicURLData } = supabaseClient
-              .storage
-              .from(STORAGE_BUCKET)
-              .getPublicUrl(filePath);
-            panoramaUrl = publicURLData.publicUrl;
-          }
-
-          // Build hotspots array for this scene
-          let sceneHotspots = [];
-          
-          // Map walkthrough connections if stored in the walkthroughs table
-          const relatedHotspots = walkthroughsData.filter(w => w.scene_id === scene.id || w.from_scene_id === scene.id);
-          relatedHotspots.forEach(spot => {
-            sceneHotspots.push({
-              "pitch": spot.pitch || 0,
-              "yaw": spot.yaw || 0,
-              "type": "scene",
-              "text": spot.title || spot.text || "Next Room",
-              "sceneId": spot.target_scene_id || spot.to_scene_id
-            });
-          });
-
-          pannellumScenes[sceneKey] = {
-            "title": scene.title || scene.name || `Scene ${index + 1}`,
-            "type": "equirectangular",
-            "panorama": panoramaUrl,
-            "autoLoad": true,
-            "hotSpots": sceneHotspots
-          };
-        });
-
-        // 5. Initialize Pannellum Multi-Scene Viewer
+        // 4. Initialize Viewer
         pannellum.viewer('panorama-container', {
           "default": {
             "firstScene": firstSceneId,
             "autoRotate": -2,
             "showZoomCtrl": true,
             "showFullscreenCtrl": true,
-            "author": tourData.author || "Panosphere Studio"
+            "sceneFadeDuration": 1000,
+            "author": "Panosphere Studio"
           },
           "scenes": pannellumScenes
         });
