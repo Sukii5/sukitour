@@ -68,7 +68,6 @@
     /* ---------------------------------------------------------------- */
     /* CUSTOM CIRCULAR PREVIEW HOTSPOT STYLES                           */
     /* ---------------------------------------------------------------- */
-    /* Force Pannellum container wrapper to allow custom hotspot sizing */
     .pnm-hotspot-container, .pnm-hotspot {
       width: auto !important;
       height: auto !important;
@@ -208,6 +207,8 @@
           throw new Error('No scenes found for this tour ID.');
         }
 
+        console.log("Loaded Scenes:", scenesData);
+
         // Map scene IDs to scene details for thumbnail and title lookups
         const sceneMap = {};
         scenesData.forEach(s => {
@@ -226,8 +227,10 @@
           const formattedHotspots = [];
 
           rawHotspots.forEach(hs => {
-            // Updated key matching: check hs.id (used by your DB schema) first
-            const targetSceneId = hs.id || hs.targetSceneId || hs.target_scene_id || hs.sceneId;
+            console.log("Parsing Hotspot:", hs);
+            
+            // Correct target scene ID lookup across potential property variations
+            const targetSceneId = hs.target_scene_id || hs.targetSceneId || hs.sceneId || hs.scene_id || hs.targetId;
             const targetScene = sceneMap[targetSceneId] || {};
 
             formattedHotspots.push({
@@ -236,7 +239,7 @@
               type: "custom",
               createTooltipFunc: createPreviewHotspot,
               createTooltipArgs: {
-                title: hs.text || targetScene.title || "Navigate",
+                title: hs.text || hs.title || targetScene.title || "Navigate",
                 imageUrl: targetScene.imageUrl || "",
                 targetSceneId: targetSceneId
               }
