@@ -126,7 +126,6 @@
         if (scenesByTourId && scenesByTourId.length > 0) {
           sceneData = scenesByTourId[0];
         } else {
-          // Fallback check if scenes table relates directly via id
           const { data: sceneById } = await supabaseClient
             .from('scenes')
             .select('*')
@@ -150,20 +149,20 @@
           document.getElementById('loading-overlay').style.display = 'none';
         }, 300);
 
-        // 3. Find file reference from scene record
-        let filePath = '';
-        for (const key in sceneData) {
-          const val = sceneData[key];
-          if (typeof val === 'string' && (val.startsWith('http') || val.includes('.jpg') || val.includes('.png') || val.includes('.webp') || val.includes('/'))) {
-            if (key !== 'id' && key !== 'tour_id' && key !== 'title' && key !== 'name') {
-              filePath = val;
-              break;
+        // 3. Explicit check for your exact scene column names
+        let filePath = sceneData.image_path || sceneData.file_path || sceneData.panorama || sceneData.file_name || sceneData.filename || sceneData.image || sceneData.url || sceneData.file || sceneData.path;
+
+        // Fallback auto-search loop if none of the above matched
+        if (!filePath) {
+          for (const key in sceneData) {
+            const val = sceneData[key];
+            if (typeof val === 'string' && (val.startsWith('http') || val.includes('.jpg') || val.includes('.png') || val.includes('.webp') || val.includes('/'))) {
+              if (key !== 'id' && key !== 'tour_id' && key !== 'title' && key !== 'name') {
+                filePath = val;
+                break;
+              }
             }
           }
-        }
-
-        if (!filePath) {
-          filePath = sceneData.file_path || sceneData.file || sceneData.image_url || sceneData.url || sceneData.image || sceneData.path || sceneData.filename;
         }
 
         let panoramaSource = '';
@@ -177,7 +176,7 @@
             
           panoramaSource = publicURLData.publicUrl;
         } else {
-          throw new Error('Could not identify image path/filename column in the scene record.');
+          throw new Error('Could not identify image path/filename column in the scene record. Check browser console (F12) to see columns.');
         }
 
         // 4. Initialize Pannellum Viewer
