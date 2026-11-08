@@ -556,34 +556,6 @@
           };
         });
 
-        createSceneRail();
-
-        if (viewerInstance) {
-          viewerInstance.destroy();
-          viewerInstance = null;
-        }
-
-        viewerInstance = pannellum.viewer('panorama-container', {
-          default: {
-            firstScene: firstSceneId,
-            autoRotate: -1,
-            autoRotateInactivityDelay: 5000,
-            autoRotateStopDelay: 15000,
-            showZoomCtrl: false,
-            showFullscreenCtrl: false,
-            showControls: false,
-            orientationOnByDefault: true,
-            maxHfov: 120,
-            // A wider field of view starts each room zoomed out for more context.
-            sceneFadeDuration: 1200,
-            compass: false,
-            keyboardZoom: true,
-            mouseZoom: true,
-            friction: 0.15,
-          },
-          scenes: pannellumScenes
-        });
-
         viewerInstance.on('load', () => {
           hideLoader();
           isLoadingScene = false;
