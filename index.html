@@ -66,56 +66,55 @@
     }
 
     /* ---------------------------------------------------------------- */
-    /* CUSTOM CIRCULAR PREVIEW HOTSPOT STYLES                           */
+    /* OVERRIDE PANNELLUM HOTSPOT CONTAINER TO RENDER CIRCULAR PREVIEWS  */
     /* ---------------------------------------------------------------- */
-    .pnm-hotspot-container, .pnm-hotspot {
+    div.pnm-hotspot-container div.pnm-hotspot.custom-hotspot {
       width: auto !important;
       height: auto !important;
-      background: transparent !important;
+      background: none !important;
       border: none !important;
+      box-shadow: none !important;
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: center !important;
+      justify-content: center !important;
+      cursor: pointer !important;
+      transform: translate(-50%, -50%) !important;
+      z-index: 100 !important;
     }
 
-    .custom-hotspot {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      cursor: pointer;
-      transform: translate(-50%, -50%);
-      transition: transform 0.2s ease, opacity 0.2s ease;
-      z-index: 5;
+    .hotspot-preview-circle {
+      width: 60px !important;
+      height: 60px !important;
+      border-radius: 50% !important;
+      border: 3px solid #ffffff !important;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.7), 0 0 10px rgba(59, 130, 246, 0.5) !important;
+      background-size: cover !important;
+      background-position: center !important;
+      background-repeat: no-repeat !important;
+      background-color: #222222 !important;
+      transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease !important;
     }
-    .custom-hotspot:hover {
-      transform: translate(-50%, -50%) scale(1.15);
+
+    div.pnm-hotspot.custom-hotspot:hover .hotspot-preview-circle {
+      transform: scale(1.15) !important;
+      border-color: #3b82f6 !important;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.8), 0 0 16px rgba(59, 130, 246, 0.9) !important;
     }
-    .hotspot-circle {
-      width: 64px;
-      height: 64px;
-      border-radius: 50%;
-      border: 3px solid #ffffff;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6), 0 0 12px rgba(59, 130, 246, 0.6);
-      background-size: cover;
-      background-position: center;
-      background-repeat: no-repeat;
-      background-color: #222222;
-      transition: border-color 0.2s ease, box-shadow 0.2s ease;
-    }
-    .custom-hotspot:hover .hotspot-circle {
-      border-color: #3b82f6;
-      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.8), 0 0 16px rgba(59, 130, 246, 0.9);
-    }
-    .hotspot-label {
-      margin-top: 6px;
-      background: rgba(0, 0, 0, 0.8);
-      backdrop-filter: blur(4px);
-      color: #ffffff;
-      font-size: 12px;
-      font-weight: 600;
-      padding: 4px 10px;
-      border-radius: 12px;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      white-space: nowrap;
-      pointer-events: none;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+
+    .hotspot-preview-label {
+      margin-top: 6px !important;
+      background: rgba(0, 0, 0, 0.85) !important;
+      backdrop-filter: blur(4px) !important;
+      color: #ffffff !important;
+      font-size: 12px !important;
+      font-weight: 600 !important;
+      padding: 4px 10px !important;
+      border-radius: 12px !important;
+      border: 1px solid rgba(255, 255, 255, 0.2) !important;
+      white-space: nowrap !important;
+      pointer-events: none !important;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4) !important;
     }
   </style>
 </head>
@@ -140,27 +139,28 @@
 
     let viewerInstance = null;
 
-    // Custom renderer for Pannellum hotspots
+    // Custom Hotspot DOM Creator
     function createPreviewHotspot(hotSpotDiv, args) {
       hotSpotDiv.classList.add('custom-hotspot');
 
-      // 1. Circular preview thumbnail container
+      // 1. Circle element with linked panorama thumbnail image
       const circleEl = document.createElement('div');
-      circleEl.classList.add('hotspot-circle');
+      circleEl.className = 'hotspot-preview-circle';
       if (args.imageUrl) {
-        circleEl.style.backgroundImage = `url('${args.imageUrl}')`;
+        circleEl.style.backgroundImage = `url("${args.imageUrl}")`;
       }
 
-      // 2. Room text label
+      // 2. Room label
       const labelEl = document.createElement('div');
-      labelEl.classList.add('hotspot-label');
+      labelEl.className = 'hotspot-preview-label';
       labelEl.innerText = args.title || 'Navigate';
 
       hotSpotDiv.appendChild(circleEl);
       hotSpotDiv.appendChild(labelEl);
 
-      // Click event to trigger scene navigation inside Pannellum
-      hotSpotDiv.addEventListener('click', () => {
+      // Handle Scene Switching
+      hotSpotDiv.addEventListener('click', (e) => {
+        e.stopPropagation();
         if (viewerInstance && args.targetSceneId) {
           viewerInstance.loadScene(args.targetSceneId);
         }
@@ -196,7 +196,7 @@
         document.title = projectTitle;
         document.getElementById('page-title').innerText = projectTitle;
 
-        // 2. Fetch all scenes belonging to this tour_id ordered by order_index
+        // 2. Fetch all scenes for this tour
         const { data: scenesData, error: scenesError } = await supabaseClient
           .from('scenes')
           .select('*')
@@ -207,9 +207,7 @@
           throw new Error('No scenes found for this tour ID.');
         }
 
-        console.log("Loaded Scenes:", scenesData);
-
-        // Map scene IDs to scene details for thumbnail and title lookups
+        // Build mapping table for scene lookup by ID
         const sceneMap = {};
         scenesData.forEach(s => {
           sceneMap[s.id] = {
@@ -218,7 +216,7 @@
           };
         });
 
-        // 3. Construct Pannellum multi-scene structure
+        // 3. Construct Pannellum Multi-Scene Setup
         const pannellumScenes = {};
         const firstSceneId = scenesData[0].id;
 
@@ -227,10 +225,8 @@
           const formattedHotspots = [];
 
           rawHotspots.forEach(hs => {
-            console.log("Parsing Hotspot:", hs);
-            
-            // Correct target scene ID lookup across potential property variations
-            const targetSceneId = hs.target_scene_id || hs.targetSceneId || hs.sceneId || hs.scene_id || hs.targetId;
+            // Target scene ID in your JSONB is "id" or "targetSceneId"
+            const targetSceneId = hs.id || hs.targetSceneId || hs.target_scene_id || hs.sceneId;
             const targetScene = sceneMap[targetSceneId] || {};
 
             formattedHotspots.push({
@@ -239,7 +235,7 @@
               type: "custom",
               createTooltipFunc: createPreviewHotspot,
               createTooltipArgs: {
-                title: hs.text || hs.title || targetScene.title || "Navigate",
+                title: targetScene.title || hs.text || hs.title || "Navigate",
                 imageUrl: targetScene.imageUrl || "",
                 targetSceneId: targetSceneId
               }
@@ -258,7 +254,7 @@
           };
         });
 
-        // Hide loading screen
+        // Hide overlay
         document.getElementById('loading-overlay').style.opacity = '0';
         setTimeout(() => {
           document.getElementById('loading-overlay').style.display = 'none';
