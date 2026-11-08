@@ -533,6 +533,10 @@
           .from('tours').select('*').eq('id', tourId).single();
         if (tourError || !tourData) throw new Error(tourError ? tourError.message : 'Tour project not found.');
 
+        const projectTitle = tourData.title || 'Panosphere Studio';
+        document.title = `${projectTitle}`;
+        $('tour-title').textContent = projectTitle;
+
         const { data: scenesData, error: scenesError } = await supabaseClient
           .from('scenes').select('*').eq('tour_id', tourId).order('order_index', { ascending: true });
         if (scenesError || !scenesData || scenesData.length === 0) {
