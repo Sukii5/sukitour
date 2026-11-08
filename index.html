@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>360 Tour Viewer</title>
+  <title id="page-title">360 Tour Viewer</title>
 
   <!-- Pannellum CSS & JS -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css"/>
@@ -78,7 +78,7 @@
     const SUPABASE_URL = 'https://pcfdrglvvmlrjzhwuvze.supabase.co';
     const SUPABASE_ANON_KEY = 'sb_publishable_btfQ4JKEiDvRm89qO8TZFg_n1rBqVGz';
     const TABLE_NAME = 'tours';
-    const STORAGE_BUCKET = 'tours'; // Name of your Supabase Storage bucket
+    const STORAGE_BUCKET = 'tours';
 
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -109,19 +109,21 @@
           throw new Error(error ? error.message : 'Tour record not found.');
         }
 
+        // Dynamically update the website page/tab title to the tour project name
+        const projectTitle = data.title || data.name || "360 Tour Presentation";
+        document.getElementById('page-title').innerText = projectTitle;
+
         document.getElementById('loading-overlay').style.opacity = '0';
         setTimeout(() => {
           document.getElementById('loading-overlay').style.display = 'none';
         }, 300);
 
-        // Look for any column that might hold a file name or path (e.g., file_path, name, filename)
-        const filePath = data.file_path || data.file || data.name || data.filename;
+        const filePath = data.file_path || data.file || data.image_url || data.url || data.image;
 
         let panoramaSource = '';
         if (filePath && filePath.startsWith('http')) {
-          panoramaSource = filePath; // It's already a full URL
+          panoramaSource = filePath;
         } else if (filePath) {
-          // Generate public URL from Supabase Storage bucket
           const { data: publicURLData } = supabaseClient
             .storage
             .from(STORAGE_BUCKET)
@@ -138,7 +140,7 @@
           "autoLoad": true,
           "autoRotate": -2,
           "compass": false,
-          "title": data.title || "Client Presentation",
+          "title": projectTitle,
           "author": data.author || "Panosphere Studio",
           "showZoomCtrl": true,
           "showFullscreenCtrl": true
