@@ -528,10 +528,6 @@
         return;
       }
 
-      const projectTitle = tourData.title || 'Panosphere Studio';
-        document.title = `${projectTitle}`;
-        $('tour-title').textContent = projectTitle;
-
       try {
         const { data: tourData, error: tourError } = await supabaseClient
           .from('tours').select('*').eq('id', tourId).single();
