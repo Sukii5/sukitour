@@ -556,7 +556,61 @@
           };
         });
 
-      
+        createSceneRail();
+
+        if (viewerInstance) {
+          viewerInstance.destroy();
+          viewerInstance = null;
+        }
+
+        viewerInstance = pannellum.viewer('panorama-container', {
+          default: {
+            firstScene: firstSceneId,
+            autoRotate: -1,
+            autoRotateInactivityDelay: 5000,
+            autoRotateStopDelay: 15000,
+            showZoomCtrl: false,
+            showFullscreenCtrl: false,
+            showControls: false,
+            orientationOnByDefault: true,
+            maxHfov: 120,
+            // A wider field of view starts each room zoomed out for more context.
+            sceneFadeDuration: 1200,
+            compass: false,
+            keyboardZoom: true,
+            mouseZoom: true,
+            friction: 0.15,
+          },
+          scenes: pannellumScenes
+        });
+
+        viewerInstance.on('load', () => {
+          hideLoader();
+          isLoadingScene = false;
+          updateSceneUI(viewerInstance.getScene());
+          // Enforce a comfortably zoomed-out starting view even if older scene data used a tighter HFOV.
+          if (viewerInstance.getHfov() < 110) viewerInstance.setHfov(110, 0);
+          if (isMobileDevice()) enableGyro(false);
+        });
+        viewerInstance.on('scenechange', (sceneId) => {
+          isLoadingScene = true;
+          updateSceneUI(sceneId);
+        });
+        viewerInstance.on('scenechangefadedone', () => {
+          $('panorama-container').classList.remove('is-zooming');
+          isLoadingScene = false;
+        });
+        viewerInstance.on('error', (error) => {
+          console.error('Panorama viewer error:', error);
+        });
+        updateSceneUI(firstSceneId);
+        $('interaction-hint').classList.remove('hidden');
+        window.setTimeout(() => $('interaction-hint').classList.add('hidden'), 6500);
+      } catch (error) {
+        console.error('Unable to load tour:', error);
+        showError(`We couldn't load this virtual tour. ${error.message || 'Please try again in a moment.'}`);
+      }
+    }
 
     function adjustZoom(amount) {
       if (!viewerInstance) return;
