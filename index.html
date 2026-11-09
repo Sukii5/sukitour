@@ -39,18 +39,24 @@
       position:absolute; inset:0; z-index:2; pointer-events:none;
       background:linear-gradient(180deg,rgba(3,7,11,.58) 0%,transparent 23%,transparent 63%,rgba(3,7,11,.48) 100%);
     }
-    /* Soft cinematic fade-in layered over the panorama during scene changes. */
+
+    /* Modern & Elegant Cinematic Iris/Blur Transition Overlay */
     .scene-fade-overlay {
-      position:absolute; inset:0; z-index:4; pointer-events:none;
-      background:rgba(5,9,13,.42);
-      opacity:0; visibility:hidden;
-      transition:opacity 1.35s cubic-bezier(.22,.61,.36,1), visibility 1.35s;
+      position: absolute; inset: 0; z-index: 4; pointer-events: none;
+      background: radial-gradient(circle at center, rgba(8,13,18,0.3) 0%, rgba(4,7,10,0.88) 100%);
+      backdrop-filter: blur(0px);
+      opacity: 0; visibility: hidden;
+      transition: opacity 1.1s cubic-bezier(0.16, 1, 0.3, 1), 
+                  backdrop-filter 1.1s cubic-bezier(0.16, 1, 0.3, 1), 
+                  visibility 1.1s;
     }
     .scene-fade-overlay.is-active {
-      opacity:1; visibility:visible;
+      opacity: 1; visibility: visible;
+      backdrop-filter: blur(12px);
     }
     .scene-fade-overlay.is-revealing {
-      opacity:0; visibility:visible;
+      opacity: 0; visibility: visible;
+      backdrop-filter: blur(0px);
     }
 
     .topbar {
@@ -152,12 +158,14 @@
     }
     .hint svg { width:14px; height:14px; stroke:currentColor; fill:none; stroke-width:1.7; }
     .hint.hidden { opacity:0; }
+    
     /* Pannellum controls */
     .pnlm-controls { top:auto !important; bottom:86px !important; right:clamp(16px,4vw,58px) !important; left:auto !important; border-radius:12px !important; overflow:hidden; box-shadow:0 8px 25px rgba(0,0,0,.22); }
     body.rail-open .pnlm-controls { bottom:154px !important; }
     .pnlm-control { background-color:rgba(9,14,20,.72) !important; backdrop-filter:blur(12px); }
     .pnlm-control:hover { background-color:rgba(35,47,57,.9) !important; }
     .pnlm-hotspot-base { z-index:5; }
+    
     div.pnlm-hotspot-container div.pnlm-hotspot.custom-hotspot {
       position:relative !important;
       display:block !important;
@@ -170,60 +178,91 @@
       transform:translate(-50%,-50%) !important;
       z-index:100 !important;
     }
-    .hotspot-content-anchor {
-      position:absolute !important;
-      left:50% !important; top:0 !important;
-      width:0 !important; height:0 !important;
-      overflow:visible !important;
-      pointer-events:none !important;
-    }
 
-    /* Bouncing animation resting on the top border of the label and bouncing upward */
-    @keyframes hotspotBounceUp {
+    /* Unified Floating & Breathing Pulse Animation */
+    @keyframes modernFloatPulse {
       0%, 100% {
-        top: 12px; /* Rests right on the top border of the label */
+        transform: translateY(0) scale(1);
+        filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.35));
       }
       50% {
-        top: 2px;  /* Bounces upward */
+        transform: translateY(-6px) scale(1.02);
+        filter: drop-shadow(0 10px 22px rgba(185, 213, 202, 0.25));
       }
+    }
+
+    .hotspot-content-anchor {
+      position: absolute !important;
+      left: 50% !important; 
+      top: 0 !important;
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: center !important;
+      transform-origin: center top !important;
+      pointer-events: auto !important;
+      animation: modernFloatPulse 3s ease-in-out infinite !important;
+      transition: transform 0.3s ease, filter 0.3s ease !important;
+    }
+
+    div.pnlm-hotspot.custom-hotspot:hover .hotspot-content-anchor {
+      animation-play-state: paused !important;
+      transform: translateY(-8px) scale(1.08) !important;
+      filter: drop-shadow(0 12px 28px rgba(185, 213, 202, 0.4)) !important;
     }
 
     .hotspot-preview-circle {
-      position: absolute !important;
-      left: 50% !important;
-      transform: translateX(-50%) !important;
-      width: 30px !important; 
-      height: 30px !important; 
+      position: relative !important;
+      left: 0 !important;
+      top: 0 !important;
+      transform: none !important;
+      width: 32px !important; 
+      height: 32px !important; 
       border-radius: 50% !important;
       border: 2px solid rgba(255,255,255,.95) !important;
-      box-shadow: 0 5px 12px rgba(0,0,0,.45), 0 0 0 5px rgba(255,255,255,.13) !important;
+      box-shadow: 0 4px 14px rgba(0,0,0,.4), 0 0 0 4px rgba(255,255,255,.14) !important;
       background-size: cover !important; 
       background-position: center !important;
       background-repeat: no-repeat !important; 
       background-color: #26313a !important;
-      animation: hotspotBounceUp 2.1s infinite ease-in-out !important;
+      transition: border-color 0.3s, box-shadow 0.3s !important;
     }
+
     div.pnlm-hotspot.custom-hotspot:hover .hotspot-preview-circle {
-      animation-play-state: paused !important;
-      transform: translateX(-50%) scale(1.13) !important; 
       border-color: var(--accent-strong) !important;
-      box-shadow: 0 8px 25px rgba(0,0,0,.55), 0 0 0 7px rgba(185,213,202,.23) !important;
+      box-shadow: 0 6px 20px rgba(0,0,0,.6), 0 0 0 6px rgba(185,213,202,.3) !important;
     }
+
     .hotspot-preview-label {
-      position:absolute !important;
-      left:0 !important;
-      top:42px !important; /* Label sits cleanly below the resting point of the icon */
-      transform:translateX(-50%) !important;
-      display:block !important;
-      width:max-content !important; max-width:160px !important;
-      margin:0 !important; text-align:center !important;
-      background:rgba(48, 51, 55, 0.83) !important;
-      backdrop-filter:blur(6px) !important; color:#fff !important; font-size:10px !important;
-      font-weight:400 !important; letter-spacing:.01em !important; padding:4px 8px !important;
-      border-radius:6px !important; border:1px solid rgba(255,255,255,.18) !important;
-      white-space:nowrap !important; pointer-events:none !important;
-      box-shadow:0 3px 6px rgba(0,0,0,.25) !important;
+      position: relative !important;
+      left: 0 !important;
+      top: 6px !important;
+      transform: none !important;
+      display: block !important;
+      width: max-content !important; 
+      max-width: 160px !important;
+      margin: 0 !important; 
+      text-align: center !important;
+      background: rgba(12, 17, 24, 0.82) !important;
+      backdrop-filter: blur(8px) !important; 
+      color: #fff !important; 
+      font-size: 10px !important;
+      font-weight: 500 !important; 
+      letter-spacing: .02em !important; 
+      padding: 4px 10px !important;
+      border-radius: 8px !important; 
+      border: 1px solid rgba(255,255,255,.2) !important;
+      white-space: nowrap !important; 
+      pointer-events: none !important;
+      box-shadow: 0 4px 12px rgba(0,0,0,.3) !important;
+      transition: border-color 0.3s, background 0.3s !important;
     }
+
+    div.pnlm-hotspot.custom-hotspot:hover .hotspot-preview-label {
+      border-color: rgba(185, 213, 202, 0.6) !important;
+      background: rgba(18, 25, 34, 0.92) !important;
+      color: var(--accent-strong) !important;
+    }
+
     .gyro-button { display:none; }
     .gyro-button.is-active { border-color:rgba(185,213,202,.75); background:rgba(91,132,116,.42); color:var(--accent-strong); }
     .pnlm-load-box, .pnlm-lbox {
@@ -235,7 +274,6 @@
     #panorama-container {
       transform:scale(1);
       transform-origin:50% 50%;
-      /* Slower, more elegant 1.4s transition curve for walking-in effect */
       transition:transform 1.4s cubic-bezier(0.25, 1, 0.5, 1);
       will-change:transform;
     }
@@ -282,8 +320,8 @@
         width:32px !important; height:32px !important;
         min-width:32px !important; min-height:32px !important;
       }
-      .hotspot-preview-circle { width:32px !important; height:32px !important; box-shadow:0 3px 12px rgba(0,0,0,.48),0 0 0 3px rgba(255,255,255,.11) !important; }
-      .hotspot-preview-label { left:0 !important; top:39px !important; max-width:112px !important; padding:4px 7px !important; border-radius:7px !important; font-size:9px !important; line-height:1.2 !important; }
+      .hotspot-preview-circle { width:30px !important; height:30px !important; box-shadow:0 3px 12px rgba(0,0,0,.48),0 0 0 3px rgba(255,255,255,.11) !important; }
+      .hotspot-preview-label { top:4px !important; max-width:112px !important; padding:3px 7px !important; border-radius:6px !important; font-size:9px !important; line-height:1.2 !important; }
       .scene-rail-wrap { padding:8px; border-radius:15px; }
       .rail-heading { padding:1px 3px 7px; }
       .scene-card { flex-basis:116px; height:58px; padding:8px; border-radius:10px; }
@@ -526,8 +564,9 @@
       const fade = $('scene-fade-overlay');
 
       try {
+        // Smooth camera forward zoom glide into the portal
         const currentHfov = viewerInstance.getHfov();
-        viewerInstance.setHfov(Math.max(82, currentHfov - 11), 1800);
+        viewerInstance.setHfov(Math.max(75, currentHfov - 14), 1100);
       } catch (error) {
         console.debug('Camera glide was skipped:', error);
       }
@@ -536,9 +575,10 @@
         if (imageReady) await imageReady;
         if (token !== sceneTransitionToken || !viewerInstance) return;
 
+        // Elegant blur + radial vignette fade-out
         fade.classList.remove('is-revealing');
         fade.classList.add('is-active');
-        await new Promise(resolve => window.setTimeout(resolve, 900));
+        await new Promise(resolve => window.setTimeout(resolve, 650));
         if (token !== sceneTransitionToken || !viewerInstance) return;
 
         viewerInstance.loadScene(sceneId);
@@ -653,7 +693,7 @@
             showControls: false,
             orientationOnByDefault: true,
             maxHfov: 120,
-            sceneFadeDuration: 2600,
+            sceneFadeDuration: 2000,
             compass: false,
             keyboardZoom: true,
             mouseZoom: true,
@@ -672,7 +712,7 @@
             fade.classList.add('is-revealing');
             window.setTimeout(() => {
               fade.classList.remove('is-revealing');
-            }, 1450);
+            }, 1100);
           }
           if (viewerInstance.getHfov() < 110) viewerInstance.setHfov(110, 0);
           if (isMobileDevice()) enableGyro(false);
@@ -686,7 +726,7 @@
           const fade = $('scene-fade-overlay');
           fade.classList.remove('is-active');
           fade.classList.add('is-revealing');
-          window.setTimeout(() => fade.classList.remove('is-revealing'), 1450);
+          window.setTimeout(() => fade.classList.remove('is-revealing'), 1100);
         });
         viewerInstance.on('error', (error) => {
           console.error('Panorama viewer error:', error);
