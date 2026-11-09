@@ -40,14 +40,6 @@
       background:linear-gradient(180deg,rgba(3,7,11,.58) 0%,transparent 23%,transparent 63%,rgba(3,7,11,.48) 100%);
     }
 
-    /* Hide any inner icon, text, or plus sign inside the preview circle */
-    .hotspot-preview-circle::before,
-    .hotspot-preview-circle::after,
-    .hotspot-preview-circle * {
-      display: none !important;
-      content: none !important;
-    }
-
     /* Modern & Elegant Cinematic Iris/Blur Transition Overlay */
     .scene-fade-overlay {
       position: absolute; inset: 0; z-index: 4; pointer-events: none;
@@ -187,13 +179,12 @@
       z-index:100 !important;
     }
 
-    /* Hide any default Pannellum cross/plus icon indicators */
+    /* Completely hide Pannellum's default built-in hotspot icon markers/plus signs */
+    div.pnlm-hotspot.custom-hotspot span,
     div.pnlm-hotspot.custom-hotspot::before,
     div.pnlm-hotspot.custom-hotspot::after,
-    .pnlm-hotspot-base::before,
-    .pnlm-hotspot-base::after {
+    .pnlm-hotspot-base span {
       display: none !important;
-      content: none !important;
     }
 
     /* Unified Floating & Breathing Pulse Animation */
