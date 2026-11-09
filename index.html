@@ -179,6 +179,15 @@
       z-index:100 !important;
     }
 
+    /* Hide any default Pannellum cross/plus icon indicators */
+    div.pnlm-hotspot.custom-hotspot::before,
+    div.pnlm-hotspot.custom-hotspot::after,
+    .pnlm-hotspot-base::before,
+    .pnlm-hotspot-base::after {
+      display: none !important;
+      content: none !important;
+    }
+
     /* Unified Floating & Breathing Pulse Animation */
     @keyframes modernFloatPulse {
       0%, 100% {
@@ -219,18 +228,17 @@
       height: 32px !important; 
       border-radius: 50% !important;
       border: 2px solid rgba(255,255,255,.95) !important;
-      box-shadow: 0 6px 16px rgba(0,0,0,0.45) !important;
+      box-shadow: 0 4px 14px rgba(0,0,0,.4) !important;
       background-size: cover !important; 
       background-position: center !important;
       background-repeat: no-repeat !important; 
       background-color: #26313a !important;
-      overflow: hidden !important; /* Hides any badge overflowing the circle */
       transition: border-color 0.3s, box-shadow 0.3s !important;
     }
 
     div.pnlm-hotspot.custom-hotspot:hover .hotspot-preview-circle {
       border-color: var(--accent-strong) !important;
-      box-shadow: 0 6px 20px rgba(0,0,0,.6), 0 0 0 6px rgba(185,213,202,.3) !important;
+      box-shadow: 0 6px 20px rgba(0,0,0,.6) !important;
     }
 
     .hotspot-preview-label {
@@ -321,7 +329,7 @@
         width:32px !important; height:32px !important;
         min-width:32px !important; min-height:32px !important;
       }
-      .hotspot-preview-circle { width:30px !important; height:30px !important; box-shadow:0 3px 12px rgba(0,0,0,.48),0 0 0 3px rgba(255,255,255,.11) !important; }
+      .hotspot-preview-circle { width:30px !important; height:30px !important; box-shadow:0 3px 12px rgba(0,0,0,.48) !important; }
       .hotspot-preview-label { top:4px !important; max-width:112px !important; padding:3px 7px !important; border-radius:6px !important; font-size:9px !important; line-height:1.2 !important; }
       .scene-rail-wrap { padding:8px; border-radius:15px; }
       .rail-heading { padding:1px 3px 7px; }
@@ -565,7 +573,6 @@
       const fade = $('scene-fade-overlay');
 
       try {
-        // Smooth camera forward zoom glide into the portal
         const currentHfov = viewerInstance.getHfov();
         viewerInstance.setHfov(Math.max(75, currentHfov - 14), 1100);
       } catch (error) {
@@ -576,7 +583,6 @@
         if (imageReady) await imageReady;
         if (token !== sceneTransitionToken || !viewerInstance) return;
 
-        // Elegant blur + radial vignette fade-out
         fade.classList.remove('is-revealing');
         fade.classList.add('is-active');
         await new Promise(resolve => window.setTimeout(resolve, 650));
