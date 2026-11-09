@@ -125,8 +125,6 @@
     .pnlm-control:hover { background-color:rgba(35,47,57,.9) !important; }
     .pnlm-hotspot-base { z-index:5; }
     div.pnlm-hotspot-container div.pnlm-hotspot.custom-hotspot {
-      /* Keep the hotspot anchor exactly the same size as the preview icon.
-         The label is positioned independently from this fixed centre point. */
       position:relative !important;
       display:block !important;
       width:48px !important; height:48px !important;
@@ -161,8 +159,6 @@
       box-shadow:0 8px 25px rgba(0,0,0,.55),0 0 0 7px rgba(185,213,202,.23) !important;
     }
     .hotspot-preview-label {
-      /* Anchor the label to the icon's true horizontal midpoint, not the
-         intrinsic width of the Pannellum hotspot wrapper. */
       position:absolute !important;
       left:0 !important;
       top:42px !important;
@@ -179,8 +175,6 @@
     }
     .gyro-button { display:none; }
     .gyro-button.is-active { border-color:rgba(185,213,202,.75); background:rgba(91,132,116,.42); color:var(--accent-strong); }
-    /* Suppress Pannellum's small per-scene "Loading" panel. Scene changes
-       are handled by the cinematic zoom transition below instead. */
     .pnlm-load-box, .pnlm-lbox {
       display:none !important;
       visibility:hidden !important;
@@ -190,11 +184,12 @@
     #panorama-container {
       transform:scale(1);
       transform-origin:50% 50%;
-      transition:transform .62s cubic-bezier(.22,.72,.18,1);
+      /* Slower, more elegant 1.4s transition curve for walking-in effect */
+      transition:transform 1.4s cubic-bezier(0.25, 1, 0.5, 1);
       will-change:transform;
     }
     #panorama-container.is-zooming {
-      transform:scale(1.055);
+      transform:scale(1.15);
     }
 
     #loading-overlay {
@@ -330,7 +325,6 @@
   </div>
 
   <script>
-    // Backend configuration retained from your original viewer.
     const SUPABASE_URL = 'https://pcfdrglvvmlrjzhwuvze.supabase.co';
     const SUPABASE_ANON_KEY = 'sb_publishable_btfQ4JKEiDvRm89qO8TZFg_n1rBqVGz';
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -346,10 +340,9 @@
 
     const $ = (id) => document.getElementById(id);
 
-    // Warm panorama assets into the browser cache without blocking the first scene.
     function preloadPanoramas(sceneList) {
       const urls = [...new Set(sceneList.map(scene => scene.panorama_url).filter(Boolean))];
-      urls.forEach((url, index) => {
+      urls.forEach((url) => {
         if (preloadedImages.has(url)) return;
         const image = new Image();
         image.decoding = 'async';
@@ -475,8 +468,12 @@
       const container = $('panorama-container');
       const token = ++sceneTransitionToken;
 
-      // Start the cinematic push-in immediately while the target panorama
-      // finishes decoding in the background cache.
+      // 1. Gently narrow the field of view for a soft optical push-in ("walking in")
+      try {
+        viewerInstance.setHfov(75, 1200);
+      } catch (e) {}
+
+      // 2. Start the slow elegant scale transition
       container.classList.remove('is-zooming');
       void container.offsetWidth;
       container.classList.add('is-zooming');
@@ -484,16 +481,21 @@
       try {
         if (imageReady) await imageReady;
         if (token !== sceneTransitionToken || !viewerInstance) return;
+        
+        // Wait slightly to let the zoom gesture play out before swapping panorama data
+        await new Promise(resolve => window.setTimeout(resolve, 700));
+        if (token !== sceneTransitionToken || !viewerInstance) return;
+
         viewerInstance.loadScene(sceneId);
       } catch (error) {
         console.warn('Preloaded panorama was unavailable; loading normally:', error);
         if (token === sceneTransitionToken && viewerInstance) viewerInstance.loadScene(sceneId);
       }
 
-      // Safety fallback for a failed/unsupported scenechangefadedone event.
+      // Safety fallback to clear zoom state
       window.setTimeout(() => {
         if (token === sceneTransitionToken) container.classList.remove('is-zooming');
-      }, 1900);
+      }, 2000);
     }
 
     function createPreviewHotspot(hotSpotDiv, args) {
@@ -544,7 +546,6 @@
         }
 
         scenes = scenesData;
-        // Start caching every panorama in the background so scene changes feel immediate.
         preloadPanoramas(scenesData);
         const sceneMap = {};
         scenesData.forEach(scene => {
@@ -601,7 +602,6 @@
             showControls: false,
             orientationOnByDefault: true,
             maxHfov: 120,
-            // A wider field of view starts each room zoomed out for more context.
             sceneFadeDuration: 1200,
             compass: false,
             keyboardZoom: true,
@@ -615,7 +615,6 @@
           hideLoader();
           isLoadingScene = false;
           updateSceneUI(viewerInstance.getScene());
-          // Enforce a comfortably zoomed-out starting view even if older scene data used a tighter HFOV.
           if (viewerInstance.getHfov() < 110) viewerInstance.setHfov(110, 0);
           if (isMobileDevice()) enableGyro(false);
         });
