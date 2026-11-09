@@ -209,7 +209,7 @@
       transform: translateY(-8px) scale(1.08) !important;
       filter: drop-shadow(0 12px 28px rgba(185, 213, 202, 0.4)) !important;
     }
-    
+
     .hotspot-preview-circle {
       position: relative !important;
       left: 0 !important;
@@ -219,11 +219,12 @@
       height: 32px !important; 
       border-radius: 50% !important;
       border: 2px solid rgba(255,255,255,.95) !important;
-      box-shadow: 0 6px 16px rgba(0,0,0,0.45) !important; /* Clean single shadow without ring artifact */
+      box-shadow: 0 6px 16px rgba(0,0,0,0.45) !important;
       background-size: cover !important; 
       background-position: center !important;
       background-repeat: no-repeat !important; 
       background-color: #26313a !important;
+      overflow: hidden !important; /* Hides any badge overflowing the circle */
       transition: border-color 0.3s, box-shadow 0.3s !important;
     }
 
