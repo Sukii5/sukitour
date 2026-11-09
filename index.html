@@ -37,6 +37,20 @@
       position:absolute; inset:0; z-index:2; pointer-events:none;
       background:linear-gradient(180deg,rgba(3,7,11,.58) 0%,transparent 23%,transparent 63%,rgba(3,7,11,.48) 100%);
     }
+    /* Soft cinematic fade-in layered over the panorama during scene changes. */
+    .scene-fade-overlay {
+      position:absolute; inset:0; z-index:4; pointer-events:none;
+      background:rgba(5,9,13,.42);
+      opacity:0; visibility:hidden;
+      transition:opacity 1.35s cubic-bezier(.22,.61,.36,1), visibility 1.35s;
+    }
+    .scene-fade-overlay.is-active {
+      opacity:1; visibility:visible;
+    }
+    .scene-fade-overlay.is-revealing {
+      opacity:0; visibility:visible;
+    }
+
     .topbar {
       position:absolute; z-index:20; top:0; left:0; right:0;
       display:flex; align-items:center; justify-content:space-between; gap:18px;
@@ -278,6 +292,7 @@
 <body>
   <div id="panorama-container"></div>
   <div class="viewer-vignette"></div>
+  <div class="scene-fade-overlay" id="scene-fade-overlay" aria-hidden="true"></div>
 
   <header class="topbar">
     <div class="brand">
@@ -489,23 +504,25 @@
       const targetScene = scenes.find(scene => String(scene.id) === String(sceneId));
       const imageReady = targetScene && preloadedImages.get(targetScene.panorama_url);
       const token = ++sceneTransitionToken;
+      const fade = $('scene-fade-overlay');
 
-      // A restrained forward camera glide prepares the eye for the new space.
-      // Pannellum then blends the panoramas together inside the same viewer.
       try {
+        // A very slow, subtle forward drift gives the transition a cinematic pace.
         const currentHfov = viewerInstance.getHfov();
-        viewerInstance.setHfov(Math.max(76, currentHfov - 15), 850);
+        viewerInstance.setHfov(Math.max(82, currentHfov - 11), 1800);
       } catch (error) {
         console.debug('Camera glide was skipped:', error);
       }
 
       try {
-        // Begin the dissolve only once the destination panorama is ready.
+        // Do not begin the fade until the destination panorama is ready.
         if (imageReady) await imageReady;
         if (token !== sceneTransitionToken || !viewerInstance) return;
 
-        // A short lead-in makes the camera movement feel intentional, not abrupt.
-        await new Promise(resolve => window.setTimeout(resolve, 320));
+        // Gradually soften the outgoing panorama before changing scenes.
+        fade.classList.remove('is-revealing');
+        fade.classList.add('is-active');
+        await new Promise(resolve => window.setTimeout(resolve, 900));
         if (token !== sceneTransitionToken || !viewerInstance) return;
 
         viewerInstance.loadScene(sceneId);
@@ -620,7 +637,7 @@
             showControls: false,
             orientationOnByDefault: true,
             maxHfov: 120,
-            sceneFadeDuration: 1450,
+            sceneFadeDuration: 2600,
             compass: false,
             keyboardZoom: true,
             mouseZoom: true,
@@ -633,6 +650,14 @@
           hideLoader();
           isLoadingScene = false;
           updateSceneUI(viewerInstance.getScene());
+          const fade = $('scene-fade-overlay');
+          if (fade.classList.contains('is-active')) {
+            fade.classList.remove('is-active');
+            fade.classList.add('is-revealing');
+            window.setTimeout(() => {
+              fade.classList.remove('is-revealing');
+            }, 1450);
+          }
           if (viewerInstance.getHfov() < 110) viewerInstance.setHfov(110, 0);
           if (isMobileDevice()) enableGyro(false);
         });
@@ -642,6 +667,10 @@
         });
         viewerInstance.on('scenechangefadedone', () => {
           isLoadingScene = false;
+          const fade = $('scene-fade-overlay');
+          fade.classList.remove('is-active');
+          fade.classList.add('is-revealing');
+          window.setTimeout(() => fade.classList.remove('is-revealing'), 1450);
         });
         viewerInstance.on('error', (error) => {
           console.error('Panorama viewer error:', error);
