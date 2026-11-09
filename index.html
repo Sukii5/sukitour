@@ -87,6 +87,28 @@
     #scene-count { color:var(--muted); font-size:11px; margin-top:5px; }
     .control-cluster { display:flex; gap:7px; pointer-events:auto; }
     .control-cluster .icon-button { width:43px; height:43px; border-radius:14px; }
+    .scene-rail-wrap {
+      pointer-events:auto; width:100%; padding:10px;
+      border:1px solid rgba(255,255,255,.13); border-radius:19px;
+      background:rgba(9,14,20,.67); backdrop-filter:blur(22px);
+      box-shadow:var(--shadow);
+    }
+    .rail-heading { display:flex; align-items:center; justify-content:space-between; padding:1px 4px 9px; }
+    .rail-heading strong { font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:rgba(255,255,255,.76); }
+    .rail-heading span { color:rgba(255,255,255,.48); font-size:10px; }
+    #scene-list { display:flex; gap:8px; overflow-x:auto; scrollbar-width:thin; scrollbar-color:rgba(255,255,255,.25) transparent; padding:0 0 2px; }
+    .scene-card {
+      position:relative; flex:0 0 150px; height:69px; overflow:hidden;
+      display:flex; align-items:flex-end; text-align:left; padding:10px 11px;
+      border:1px solid rgba(255,255,255,.12); border-radius:12px;
+      background:#202a32; background-size:cover; background-position:center;
+      cursor:pointer; isolation:isolate; transition:border-color .2s,transform .2s,opacity .2s;
+    }
+    .scene-card::before { content:""; position:absolute; inset:0; z-index:-1; background:linear-gradient(180deg,rgba(0,0,0,.03),rgba(0,0,0,.75)); }
+    .scene-card:hover { transform:translateY(-2px); border-color:rgba(255,255,255,.5); }
+    .scene-card.active { border:1.5px solid var(--accent); box-shadow:inset 0 0 0 1px rgba(185,213,202,.22),0 0 0 2px rgba(185,213,202,.1); }
+    .scene-card span { font-size:11px; font-weight:600; line-height:1.2; text-shadow:0 1px 8px #000; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .scene-card .scene-number { position:absolute; top:8px; left:9px; font-size:9px; color:rgba(255,255,255,.8); }
     .hint {
       position:absolute; z-index:8; top:91px; left:50%; transform:translateX(-50%);
       display:flex; align-items:center; gap:8px; padding:9px 13px;
@@ -98,11 +120,13 @@
     .hint svg { width:14px; height:14px; stroke:currentColor; fill:none; stroke-width:1.7; }
     .hint.hidden { opacity:0; }
     /* Pannellum controls */
-    .pnlm-controls { top:auto !important; bottom:95px !important; right:clamp(16px,4vw,58px) !important; left:auto !important; border-radius:12px !important; overflow:hidden; box-shadow:0 8px 25px rgba(0,0,0,.22); }
+    .pnlm-controls { top:auto !important; bottom:154px !important; right:clamp(16px,4vw,58px) !important; left:auto !important; border-radius:12px !important; overflow:hidden; box-shadow:0 8px 25px rgba(0,0,0,.22); }
     .pnlm-control { background-color:rgba(9,14,20,.72) !important; backdrop-filter:blur(12px); }
     .pnlm-control:hover { background-color:rgba(35,47,57,.9) !important; }
     .pnlm-hotspot-base { z-index:5; }
     div.pnlm-hotspot-container div.pnlm-hotspot.custom-hotspot {
+      /* Keep the hotspot anchor exactly the same size as the preview icon.
+         The label is positioned independently from this fixed centre point. */
       position:relative !important;
       display:block !important;
       width:48px !important; height:48px !important;
@@ -137,6 +161,8 @@
       box-shadow:0 8px 25px rgba(0,0,0,.55),0 0 0 7px rgba(185,213,202,.23) !important;
     }
     .hotspot-preview-label {
+      /* Anchor the label to the icon's true horizontal midpoint, not the
+         intrinsic width of the Pannellum hotspot wrapper. */
       position:absolute !important;
       left:0 !important;
       top:50px !important;
@@ -153,6 +179,8 @@
     }
     .gyro-button { display:none; }
     .gyro-button.is-active { border-color:rgba(185,213,202,.75); background:rgba(91,132,116,.42); color:var(--accent-strong); }
+    /* Suppress Pannellum's small per-scene "Loading" panel. Scene changes
+       are handled by the cinematic zoom transition below instead. */
     .pnlm-load-box, .pnlm-lbox {
       display:none !important;
       visibility:hidden !important;
@@ -186,7 +214,7 @@
     #status-text { color:rgba(255,255,255,.72); font-size:12px; letter-spacing:.04em; }
     #error-message { display:none; max-width:540px; color:#ffc0b8; font-size:13px; line-height:1.6; overflow-wrap:anywhere; }
     .error-action { display:none; margin-top:7px; padding:10px 15px; border:1px solid var(--line); border-radius:10px; background:rgba(255,255,255,.08); cursor:pointer; font-size:12px; }
-    .brand-footer { position:absolute; z-index:18; right:clamp(18px,4vw,58px); bottom:85px; color:rgba(255,255,255,.45); font-size:9px; letter-spacing:.14em; text-transform:uppercase; pointer-events:none; }
+    .brand-footer { position:absolute; z-index:18; right:clamp(18px,4vw,58px); bottom:clamp(145px,17vw,190px); color:rgba(255,255,255,.45); font-size:9px; letter-spacing:.14em; text-transform:uppercase; pointer-events:none; }
     @media (max-width:640px) {
       .topbar { padding:15px 15px; }
       .brand-mark { width:35px; height:35px; flex-basis:35px; border-radius:11px; }
@@ -210,7 +238,11 @@
       }
       .hotspot-preview-circle { width:32px !important; height:32px !important; box-shadow:0 3px 12px rgba(0,0,0,.48),0 0 0 3px rgba(255,255,255,.11) !important; }
       .hotspot-preview-label { left:0 !important; top:39px !important; max-width:112px !important; padding:4px 7px !important; border-radius:7px !important; font-size:9px !important; line-height:1.2 !important; }
-      .pnlm-controls { bottom:75px !important; right:12px !important; transform:scale(.88); transform-origin:bottom right; }
+      .scene-rail-wrap { padding:8px; border-radius:15px; }
+      .rail-heading { padding:1px 3px 7px; }
+      .scene-card { flex-basis:116px; height:58px; padding:8px; border-radius:10px; }
+      .scene-card span { font-size:10px; }
+      .pnlm-controls { bottom:132px !important; right:12px !important; transform:scale(.88); transform-origin:bottom right; }
       .brand-footer { display:none; }
     }
     @media (pointer:coarse) {
@@ -219,7 +251,9 @@
     @media (max-height:520px) and (min-width:641px) {
       .topbar { padding-top:12px; }
       .bottom-ui { gap:8px; padding-bottom:10px; }
-      .pnlm-controls { bottom:75px !important; }
+      .scene-card { height:53px; }
+      .scene-rail-wrap { padding:7px; }
+      .pnlm-controls { bottom:115px !important; }
       .brand-footer { display:none; }
     }
     @media (prefers-reduced-motion:reduce) {
@@ -281,6 +315,10 @@
         </button>
       </div>
     </div>
+    <section class="scene-rail-wrap" aria-label="Tour scenes">
+      <div class="rail-heading"><strong>Explore spaces</strong><span id="rail-count">Scenes in this tour</span></div>
+      <div id="scene-list"></div>
+    </section>
   </div>
 
   <div id="loading-overlay">
@@ -292,6 +330,7 @@
   </div>
 
   <script>
+    // Backend configuration retained from your original viewer.
     const SUPABASE_URL = 'https://pcfdrglvvmlrjzhwuvze.supabase.co';
     const SUPABASE_ANON_KEY = 'sb_publishable_btfQ4JKEiDvRm89qO8TZFg_n1rBqVGz';
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -307,9 +346,10 @@
 
     const $ = (id) => document.getElementById(id);
 
+    // Warm panorama assets into the browser cache without blocking the first scene.
     function preloadPanoramas(sceneList) {
       const urls = [...new Set(sceneList.map(scene => scene.panorama_url).filter(Boolean))];
-      urls.forEach((url) => {
+      urls.forEach((url, index) => {
         if (preloadedImages.has(url)) return;
         const image = new Image();
         image.decoding = 'async';
@@ -392,6 +432,38 @@
       $('current-scene-title').textContent = scene.title || 'Untitled space';
       const index = scenes.findIndex(item => String(item.id) === String(sceneId));
       $('scene-count').textContent = `Space ${index + 1} of ${scenes.length}`;
+      document.querySelectorAll('.scene-card').forEach(card => {
+        const selected = card.dataset.sceneId === String(sceneId);
+        card.classList.toggle('active', selected);
+        if (selected) card.setAttribute('aria-current', 'true');
+        else card.removeAttribute('aria-current');
+      });
+    }
+
+    function createSceneRail() {
+      const list = $('scene-list');
+      list.innerHTML = '';
+      scenes.forEach((scene, index) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'scene-card';
+        button.dataset.sceneId = String(scene.id);
+        button.style.backgroundImage = `url("${String(scene.panorama_url || '').replace(/"/g, '%22')}")`;
+        button.setAttribute('aria-label', `Explore ${scene.title || `Space ${index + 1}`}`);
+        const number = document.createElement('small');
+        number.className = 'scene-number';
+        number.textContent = String(index + 1).padStart(2, '0');
+        const title = document.createElement('span');
+        title.textContent = scene.title || `Space ${index + 1}`;
+        button.append(number, title);
+        button.addEventListener('click', () => {
+          if (viewerInstance && String(scene.id) !== String(activeSceneId)) {
+            transitionToScene(scene.id);
+          }
+        });
+        list.appendChild(button);
+      });
+      $('rail-count').textContent = `${scenes.length} ${scenes.length === 1 ? 'space' : 'spaces'}`;
     }
 
     let sceneTransitionToken = 0;
@@ -403,6 +475,8 @@
       const container = $('panorama-container');
       const token = ++sceneTransitionToken;
 
+      // Start the cinematic push-in immediately while the target panorama
+      // finishes decoding in the background cache.
       container.classList.remove('is-zooming');
       void container.offsetWidth;
       container.classList.add('is-zooming');
@@ -416,6 +490,7 @@
         if (token === sceneTransitionToken && viewerInstance) viewerInstance.loadScene(sceneId);
       }
 
+      // Safety fallback for a failed/unsupported scenechangefadedone event.
       window.setTimeout(() => {
         if (token === sceneTransitionToken) container.classList.remove('is-zooming');
       }, 1900);
@@ -469,6 +544,7 @@
         }
 
         scenes = scenesData;
+        // Start caching every panorama in the background so scene changes feel immediate.
         preloadPanoramas(scenesData);
         const sceneMap = {};
         scenesData.forEach(scene => {
@@ -507,6 +583,8 @@
           };
         });
 
+        createSceneRail();
+
         if (viewerInstance) {
           viewerInstance.destroy();
           viewerInstance = null;
@@ -523,6 +601,7 @@
             showControls: false,
             orientationOnByDefault: true,
             maxHfov: 120,
+            // A wider field of view starts each room zoomed out for more context.
             sceneFadeDuration: 1200,
             compass: false,
             keyboardZoom: true,
@@ -536,6 +615,7 @@
           hideLoader();
           isLoadingScene = false;
           updateSceneUI(viewerInstance.getScene());
+          // Enforce a comfortably zoomed-out starting view even if older scene data used a tighter HFOV.
           if (viewerInstance.getHfov() < 110) viewerInstance.setHfov(110, 0);
           if (isMobileDevice()) enableGyro(false);
         });
