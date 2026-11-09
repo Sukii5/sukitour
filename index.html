@@ -488,25 +488,24 @@
 
       const targetScene = scenes.find(scene => String(scene.id) === String(sceneId));
       const imageReady = targetScene && preloadedImages.get(targetScene.panorama_url);
-      const container = $('panorama-container');
       const token = ++sceneTransitionToken;
 
-      // 1. Gently narrow the field of view for a soft optical push-in ("walking in")
+      // A restrained forward camera glide prepares the eye for the new space.
+      // Pannellum then blends the panoramas together inside the same viewer.
       try {
-        viewerInstance.setHfov(75, 1200);
-      } catch (e) {}
-
-      // 2. Start the slow elegant scale transition
-      container.classList.remove('is-zooming');
-      void container.offsetWidth;
-      container.classList.add('is-zooming');
+        const currentHfov = viewerInstance.getHfov();
+        viewerInstance.setHfov(Math.max(76, currentHfov - 15), 850);
+      } catch (error) {
+        console.debug('Camera glide was skipped:', error);
+      }
 
       try {
+        // Begin the dissolve only once the destination panorama is ready.
         if (imageReady) await imageReady;
         if (token !== sceneTransitionToken || !viewerInstance) return;
-        
-        // Wait slightly to let the zoom gesture play out before swapping panorama data
-        await new Promise(resolve => window.setTimeout(resolve, 700));
+
+        // A short lead-in makes the camera movement feel intentional, not abrupt.
+        await new Promise(resolve => window.setTimeout(resolve, 320));
         if (token !== sceneTransitionToken || !viewerInstance) return;
 
         viewerInstance.loadScene(sceneId);
@@ -514,12 +513,8 @@
         console.warn('Preloaded panorama was unavailable; loading normally:', error);
         if (token === sceneTransitionToken && viewerInstance) viewerInstance.loadScene(sceneId);
       }
-
-      // Safety fallback to clear zoom state
-      window.setTimeout(() => {
-        if (token === sceneTransitionToken) container.classList.remove('is-zooming');
-      }, 2000);
     }
+
 
     function createPreviewHotspot(hotSpotDiv, args) {
       hotSpotDiv.classList.add('custom-hotspot');
@@ -625,7 +620,7 @@
             showControls: false,
             orientationOnByDefault: true,
             maxHfov: 120,
-            sceneFadeDuration: 1200,
+            sceneFadeDuration: 1450,
             compass: false,
             keyboardZoom: true,
             mouseZoom: true,
@@ -646,7 +641,6 @@
           updateSceneUI(sceneId);
         });
         viewerInstance.on('scenechangefadedone', () => {
-          $('panorama-container').classList.remove('is-zooming');
           isLoadingScene = false;
         });
         viewerInstance.on('error', (error) => {
