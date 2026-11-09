@@ -175,6 +175,17 @@
       overflow:visible !important;
       pointer-events:none !important;
     }
+
+    /* Bouncing animation definition */
+    @keyframes hotspotBounce {
+      0%, 100% {
+        transform: translateX(-50%) translateY(0);
+      }
+      50% {
+        transform: translateX(-50%) translateY(12px); /* Bounces down to touch the label's top border */
+      }
+    }
+
     .hotspot-preview-circle {
       position:absolute !important;
       left:0 !important; top:0 !important;
@@ -184,9 +195,11 @@
       box-shadow:0 5px 12px rgba(0,0,0,.45),0 0 0 5px rgba(255,255,255,.13) !important;
       background-size:cover !important; background-position:center !important;
       background-repeat:no-repeat !important; background-color:#26313a !important;
-      transition:transform .28s cubic-bezier(.2,.8,.2,1),box-shadow .25s,border-color .25s !important;
+      transition:box-shadow .25s,border-color .25s !important;
+      animation: hotspotBounce 1.4s infinite cubic-bezier(0.36, 0, 0.66, -0.56) !important;
     }
     div.pnlm-hotspot.custom-hotspot:hover .hotspot-preview-circle {
+      animation-play-state: paused !important;
       transform:translateX(-50%) scale(1.13) !important; border-color:var(--accent-strong) !important;
       box-shadow:0 8px 25px rgba(0,0,0,.55),0 0 0 7px rgba(185,213,202,.23) !important;
     }
