@@ -40,6 +40,14 @@
       background:linear-gradient(180deg,rgba(3,7,11,.58) 0%,transparent 23%,transparent 63%,rgba(3,7,11,.48) 100%);
     }
 
+    /* Hide any inner icon, text, or plus sign inside the preview circle */
+    .hotspot-preview-circle::before,
+    .hotspot-preview-circle::after,
+    .hotspot-preview-circle * {
+      display: none !important;
+      content: none !important;
+    }
+
     /* Modern & Elegant Cinematic Iris/Blur Transition Overlay */
     .scene-fade-overlay {
       position: absolute; inset: 0; z-index: 4; pointer-events: none;
