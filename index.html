@@ -35,6 +35,12 @@
     button { font:inherit; color:inherit; }
     #panorama-container { position:absolute; inset:0; background:#101820; }
     #panorama-container .pnlm-container { background:#101820; }
+    
+    /* Hide Pannellum's default built-in scene title overlay in the bottom left */
+    .pnlm-title {
+      display: none !important;
+    }
+
     .viewer-vignette {
       position:absolute; inset:0; z-index:2; pointer-events:none;
       background:linear-gradient(180deg,rgba(3,7,11,.58) 0%,transparent 23%,transparent 63%,rgba(3,7,11,.48) 100%);
