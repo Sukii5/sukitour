@@ -36,8 +36,16 @@
     #panorama-container { position:absolute; inset:0; background:#101820; }
     #panorama-container .pnlm-container { background:#101820; }
     
-    /* Completely hide Pannellum's native dark-box scene title overlay */
-    .pnlm-title { display: none !important; }
+    /* Forcefully suppress Pannellum's native default title info box overlay */
+    .pnlm-panorama-info,
+    .pnlm-title-box,
+    .pnlm-author-box,
+    div.pnlm-title {
+      display: none !important;
+      visibility: hidden !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
 
     .viewer-vignette {
       position:absolute; inset:0; z-index:2; pointer-events:none;
@@ -367,7 +375,7 @@
     <div class="bottom-row">
       <div class="scene-meta">
         <div class="eyebrow">You are exploring</div>
-        <div id="current-scene-title">Your virtual space</div> <!-- Restored sidebar scene title -->
+        <div id="current-scene-title">Your virtual space</div>
         <div id="scene-count"></div>
       </div>
       <div class="control-cluster">
@@ -501,7 +509,7 @@
       const scene = scenes.find(item => String(item.id) === String(sceneId));
       if (!scene) return;
       activeSceneId = sceneId;
-      $('current-scene-title').textContent = scene.title || 'Untitled space'; // Updates sidebar title correctly
+      $('current-scene-title').textContent = scene.title || 'Untitled space';
       const index = scenes.findIndex(item => String(item.id) === String(sceneId));
       $('scene-count').textContent = `Space ${index + 1} of ${scenes.length}`;
       document.querySelectorAll('.scene-card').forEach(card => {
@@ -646,7 +654,7 @@
           });
 
           pannellumScenes[scene.id] = {
-            title: scene.title || 'Room',
+            /* Omitting 'title' prevents Pannellum from building its native title overlay */
             type: 'equirectangular',
             panorama: scene.panorama_url,
             pitch: Number(scene.initial_pitch) || 0,
