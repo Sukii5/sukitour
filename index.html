@@ -264,8 +264,13 @@
       transition: transform 1.25s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.3s ease;
     }
 
-    .gyro-button { display:none; }
+    /* Gyro button visible strictly on mobile / touch screen layouts */
+    .gyro-button { display: none; }
+    @media (max-width: 640px), (pointer: coarse) {
+      .gyro-button { display: inline-flex; }
+    }
     .gyro-button.is-active { border-color:rgba(185,213,202,.75); background:rgba(91,132,116,.42); color:var(--accent-strong); }
+
     .pnlm-load-box, .pnlm-lbox {
       display:none !important;
       visibility:hidden !important;
@@ -307,7 +312,6 @@
       #scene-count { font-size:10px; }
       .control-cluster { gap:5px; }
       .control-cluster .icon-button { width:37px; height:37px; border-radius:12px; }
-      .gyro-button { display:inline-flex; }
       div.pnlm-hotspot-container div.pnlm-hotspot.custom-hotspot {
         width:32px !important; height:32px !important;
         min-width:32px !important; min-height:32px !important;
@@ -321,9 +325,6 @@
       .pnlm-controls { bottom:76px !important; right:12px !important; transform:scale(.88); transform-origin:bottom right; }
       body.rail-open .pnlm-controls { bottom:132px !important; }
       .brand-footer { display:none; }
-    }
-    @media (pointer:coarse) {
-      .gyro-button { display:inline-flex; }
     }
     @media (max-height:520px) and (min-width:641px) {
       .topbar { padding-top:12px; }
@@ -354,8 +355,8 @@
       </div>
     </div>
     <div class="top-actions">
-      <button class="glass-button" id="share-button" type="button" aria-label="Copy tour link">
-        <svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg>
+      <button class="glass-button" id="share-button" type="button" aria-label="Share tour">
+        <svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
         <span id="share-label">Share tour</span>
       </button>
       <button class="icon-button" id="fullscreen-button" type="button" aria-label="Enter fullscreen" title="Fullscreen">
@@ -444,7 +445,7 @@
     }
 
     function isMobileDevice() {
-      return window.matchMedia('(max-width: 640px)').matches || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+      return window.matchMedia('(max-width: 640px), (pointer: coarse)').matches || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
     }
 
     async function enableGyro(fromUserGesture = false) {
@@ -564,7 +565,6 @@
         overlay.style.top = `${centerY}px`;
         overlay.style.backgroundImage = `url("${String(targetScene.imageUrl || '').replace(/"/g, '%22')}")`;
         
-        // Calculate dynamic scale factor to cover entire screen from hotspot point
         const maxDim = Math.max(window.innerWidth, window.innerHeight);
         const scaleFactor = (maxDim / 26) * 2.5;
         overlay.style.setProperty('--zoom-scale', scaleFactor);
@@ -576,7 +576,6 @@
         const imageReady = preloadedImages.get(targetScene.imageUrl);
         if (imageReady) await imageReady;
 
-        // Synchronize scene loading with the portal zoom animation peak
         await new Promise(resolve => window.setTimeout(resolve, 900));
         if (token !== sceneTransitionToken || !viewerInstance) return;
 
@@ -610,7 +609,6 @@
         if (token === sceneTransitionToken && viewerInstance) viewerInstance.loadScene(sceneId);
       }
     }
-
 
     function createPreviewHotspot(hotSpotDiv, args) {
       hotSpotDiv.classList.add('custom-hotspot');
