@@ -250,17 +250,6 @@
       opacity:0 !important;
       pointer-events:none !important;
     }
-    
-    /* Extended, slow & elegant 3.2s zoom-in transition effect */
-    #panorama-container {
-      transform: scale(1.12);
-      transform-origin: 50% 50%;
-      transition: transform 3.2s cubic-bezier(0.22, 1, 0.36, 1);
-      will-change: transform;
-    }
-    #panorama-container.is-zooming {
-      transform: scale(1);
-    }
 
     #loading-overlay {
       position:absolute; inset:0; z-index:100; display:flex; flex-direction:column;
@@ -541,18 +530,19 @@
       const targetScene = scenes.find(scene => String(scene.id) === String(sceneId));
       const imageReady = targetScene && preloadedImages.get(targetScene.panorama_url);
       const token = ++sceneTransitionToken;
-      const container = $('panorama-container');
-
-      // Re-trigger slow, elegant zoom-in entrance
-      container.classList.add('is-zooming');
 
       try {
+        // Smoothly zoom in to ease into the transition (lowering field of view over 1.4 seconds)
+        viewerInstance.setHfov(35, 1400);
+        await new Promise(resolve => window.setTimeout(resolve, 1400));
+        if (token !== sceneTransitionToken || !viewerInstance) return;
+
         if (imageReady) await imageReady;
         if (token !== sceneTransitionToken || !viewerInstance) return;
 
         viewerInstance.loadScene(sceneId);
       } catch (error) {
-        console.warn('Preloaded panorama was unavailable; loading normally:', error);
+        console.warn('Transition error, loading scene directly:', error);
         if (token === sceneTransitionToken && viewerInstance) viewerInstance.loadScene(sceneId);
       }
     }
@@ -674,10 +664,6 @@
           hideLoader();
           isLoadingScene = false;
           updateSceneUI(viewerInstance.getScene());
-          
-          const container = $('panorama-container');
-          container.classList.remove('is-zooming');
-
           if (viewerInstance.getHfov() < 110) viewerInstance.setHfov(110, 0);
           if (isMobileDevice()) enableGyro(false);
         });
