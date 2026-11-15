@@ -39,18 +39,24 @@
       position:absolute; inset:0; z-index:2; pointer-events:none;
       background:linear-gradient(180deg,rgba(3,7,11,.58) 0%,transparent 23%,transparent 63%,rgba(3,7,11,.48) 100%);
     }
-    /* Soft cinematic fade-in layered over the panorama during scene changes. */
+
+    /* Sophisticated & Elegant Cinematic Blur/Iris Transition Overlay */
     .scene-fade-overlay {
-      position:absolute; inset:0; z-index:4; pointer-events:none;
-      background:rgba(5,9,13,.42);
-      opacity:0; visibility:hidden;
-      transition:opacity 1.35s cubic-bezier(.22,.61,.36,1), visibility 1.35s;
+      position: absolute; inset: 0; z-index: 4; pointer-events: none;
+      background: radial-gradient(circle at center, rgba(6,10,15,0.4) 0%, rgba(3,5,8,0.92) 100%);
+      backdrop-filter: blur(0px);
+      opacity: 0; visibility: hidden;
+      transition: opacity 1.1s cubic-bezier(0.16, 1, 0.3, 1), 
+                  backdrop-filter 1.1s cubic-bezier(0.16, 1, 0.3, 1), 
+                  visibility 1.1s;
     }
     .scene-fade-overlay.is-active {
-      opacity:1; visibility:visible;
+      opacity: 1; visibility: visible;
+      backdrop-filter: blur(14px);
     }
     .scene-fade-overlay.is-revealing {
-      opacity:0; visibility:visible;
+      opacity: 0; visibility: visible;
+      backdrop-filter: blur(0px);
     }
 
     .topbar {
@@ -253,7 +259,6 @@
     #panorama-container {
       transform:scale(1);
       transform-origin:50% 50%;
-      /* Slower, more elegant 1.4s transition curve for walking-in effect */
       transition:transform 1.4s cubic-bezier(0.25, 1, 0.5, 1);
       will-change:transform;
     }
@@ -544,8 +549,9 @@
       const fade = $('scene-fade-overlay');
 
       try {
+        // Sophisticated camera depth glide forward into the portal
         const currentHfov = viewerInstance.getHfov();
-        viewerInstance.setHfov(Math.max(82, currentHfov - 11), 1800);
+        viewerInstance.setHfov(Math.max(75, currentHfov - 16), 1100);
       } catch (error) {
         console.debug('Camera glide was skipped:', error);
       }
@@ -554,9 +560,10 @@
         if (imageReady) await imageReady;
         if (token !== sceneTransitionToken || !viewerInstance) return;
 
+        // Elegant blur fade-out overlay activation
         fade.classList.remove('is-revealing');
         fade.classList.add('is-active');
-        await new Promise(resolve => window.setTimeout(resolve, 900));
+        await new Promise(resolve => window.setTimeout(resolve, 600));
         if (token !== sceneTransitionToken || !viewerInstance) return;
 
         viewerInstance.loadScene(sceneId);
@@ -671,7 +678,7 @@
             showControls: false,
             orientationOnByDefault: true,
             maxHfov: 120,
-            sceneFadeDuration: 2600,
+            sceneFadeDuration: 2200,
             compass: false,
             keyboardZoom: true,
             mouseZoom: true,
@@ -690,7 +697,7 @@
             fade.classList.add('is-revealing');
             window.setTimeout(() => {
               fade.classList.remove('is-revealing');
-            }, 1450);
+            }, 1100);
           }
           if (viewerInstance.getHfov() < 110) viewerInstance.setHfov(110, 0);
           if (isMobileDevice()) enableGyro(false);
@@ -704,7 +711,7 @@
           const fade = $('scene-fade-overlay');
           fade.classList.remove('is-active');
           fade.classList.add('is-revealing');
-          window.setTimeout(() => fade.classList.remove('is-revealing'), 1450);
+          window.setTimeout(() => fade.classList.remove('is-revealing'), 1100);
         });
         viewerInstance.on('error', (error) => {
           console.error('Panorama viewer error:', error);
