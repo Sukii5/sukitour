@@ -36,14 +36,12 @@
     #panorama-container { position:absolute; inset:0; background:#101820; }
     #panorama-container .pnlm-container { background:#101820; }
     
-    /* Completely remove Pannellum's built-in title and load boxes */
     .pnlm-title { display: none !important; }
 
     .viewer-vignette {
       position:absolute; inset:0; z-index:2; pointer-events:none;
       background:linear-gradient(180deg,rgba(3,7,11,.58) 0%,transparent 23%,transparent 63%,rgba(3,7,11,.48) 100%);
     }
-    /* Soft cinematic fade-in layered over the panorama during scene changes. */
     .scene-fade-overlay {
       position:absolute; inset:0; z-index:4; pointer-events:none;
       background:rgba(5,9,13,.42);
@@ -368,7 +366,7 @@
     <div class="bottom-row">
       <div class="scene-meta">
         <div class="eyebrow">You are exploring</div>
-        <div id="current-scene-title">Your virtual space</div>
+        <!-- Removed bottom-left scene title text box element -->
         <div id="scene-count"></div>
       </div>
       <div class="control-cluster">
@@ -502,7 +500,6 @@
       const scene = scenes.find(item => String(item.id) === String(sceneId));
       if (!scene) return;
       activeSceneId = sceneId;
-      $('current-scene-title').textContent = scene.title || 'Untitled space';
       const index = scenes.findIndex(item => String(item.id) === String(sceneId));
       $('scene-count').textContent = `Space ${index + 1} of ${scenes.length}`;
       document.querySelectorAll('.scene-card').forEach(card => {
