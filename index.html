@@ -36,10 +36,8 @@
     #panorama-container { position:absolute; inset:0; background:#101820; }
     #panorama-container .pnlm-container { background:#101820; }
     
-    /* Hide Pannellum's default built-in scene title overlay in the bottom left */
-    .pnlm-title {
-      display: none !important;
-    }
+    /* Completely remove Pannellum's built-in title and load boxes */
+    .pnlm-title { display: none !important; }
 
     .viewer-vignette {
       position:absolute; inset:0; z-index:2; pointer-events:none;
@@ -176,27 +174,36 @@
       transform:translate(-50%,-50%) !important;
       z-index:100 !important;
     }
-    .hotspot-content-anchor {
-      position:absolute !important;
-      left:50% !important; top:0 !important;
-      width:0 !important; height:0 !important;
-      overflow:visible !important;
-      pointer-events:none !important;
-    }
 
-    /* Bouncing animation resting on the top border of the label and bouncing upward */
-    @keyframes hotspotBounceUp {
+    /* Unified floating animation for BOTH the circle and the label box together */
+    @keyframes hotspotUnifiedFloat {
       0%, 100% {
-        top: 10px; 
+        transform: translate(-50%, 0);
       }
       50% {
-        top: 2px;  
+        transform: translate(-50%, -6px);
       }
+    }
+
+    .hotspot-content-anchor {
+      position: absolute !important;
+      left: 50% !important; 
+      top: 0 !important;
+      width: 0 !important; 
+      height: 0 !important;
+      overflow: visible !important;
+      pointer-events: auto !important;
+      animation: hotspotUnifiedFloat 1.4s ease-in-out infinite !important;
+    }
+
+    div.pnlm-hotspot.custom-hotspot:hover .hotspot-content-anchor {
+      animation-play-state: paused !important;
     }
 
     .hotspot-preview-circle {
       position: absolute !important;
-      left: 50% !important;
+      left: 0 !important; 
+      top: 0 !important;
       transform: translateX(-50%) !important;
       width: 26px !important; 
       height: 26px !important; 
@@ -207,36 +214,40 @@
       background-position: center !important;
       background-repeat: no-repeat !important; 
       background-color: #26313a !important;
-      animation: hotspotBounceUp 1.2s infinite ease-in-out !important;
+      transition: transform .25s ease, border-color .25s ease, box-shadow .25s ease !important;
     }
+    
     div.pnlm-hotspot.custom-hotspot:hover .hotspot-preview-circle {
-      animation-play-state: paused !important;
-      transform: translateX(-50%) scale(1.1) !important; 
+      transform: translateX(-50%) scale(1.12) !important; 
       border-color: var(--accent-strong) !important;
       box-shadow: 0 6px 18px rgba(0,0,0,.5), 0 0 0 5px rgba(185,213,202,.2) !important;
     }
 
-    /* Smaller and more semi-transparent label box */
+    /* Smaller, semi-transparent label box that moves smoothly with the circle */
     .hotspot-preview-label {
-      position:absolute !important;
-      left:0 !important;
-      top:37px !important; 
-      transform:translateX(-50%) !important;
-      display:block !important;
-      width:max-content !important; max-width:140px !important;
-      margin:0 !important; text-align:center !important;
-      background:rgba(20, 25, 32, 0.55) !important; /* Semi-transparent background */
-      backdrop-filter:blur(4px) !important; 
-      color:rgba(255, 255, 255, 0.9) !important; 
-      font-size:9px !important;
-      font-weight:400 !important; 
-      letter-spacing:.02em !important; 
-      padding:2px 6px !important; /* Smaller padding */
-      border-radius:4px !important; 
-      border:1px solid rgba(255,255,255,.12) !important;
-      white-space:nowrap !important; pointer-events:none !important;
-      box-shadow:0 2px 4px rgba(0,0,0,.2) !important;
+      position: absolute !important;
+      left: 0 !important;
+      top: 34px !important; 
+      transform: translateX(-50%) !important;
+      display: block !important;
+      width: max-content !important; 
+      max-width: 140px !important;
+      margin: 0 !important; 
+      text-align: center !important;
+      background: rgba(20, 25, 32, 0.55) !important; 
+      backdrop-filter: blur(4px) !important; 
+      color: rgba(255, 255, 255, 0.9) !important; 
+      font-size: 9px !important;
+      font-weight: 400 !important; 
+      letter-spacing: .02em !important; 
+      padding: 2px 6px !important; 
+      border-radius: 4px !important; 
+      border: 1px solid rgba(255,255,255,.12) !important;
+      white-space: nowrap !important; 
+      pointer-events: none !important;
+      box-shadow: 0 2px 4px rgba(0,0,0,.2) !important;
     }
+
     .gyro-button { display:none; }
     .gyro-button.is-active { border-color:rgba(185,213,202,.75); background:rgba(91,132,116,.42); color:var(--accent-strong); }
     .pnlm-load-box, .pnlm-lbox {
@@ -248,7 +259,6 @@
     #panorama-container {
       transform:scale(1);
       transform-origin:50% 50%;
-      /* Slower, more elegant 1.4s transition curve for walking-in effect */
       transition:transform 1.4s cubic-bezier(0.25, 1, 0.5, 1);
       will-change:transform;
     }
