@@ -242,6 +242,28 @@
       box-shadow: 0 2px 4px rgba(0,0,0,.2) !important;
     }
 
+    /* Portal Transition Overlay element that zooms the preview icon across the screen */
+    #portal-zoom-overlay {
+      position: fixed;
+      top: 0; left: 0;
+      width: 26px; height: 26px;
+      border-radius: 50%;
+      background-size: cover;
+      background-position: center;
+      border: 2px solid rgba(255,255,255,0.9);
+      box-shadow: 0 0 0 9999px rgba(5, 9, 13, 0.85);
+      z-index: 9999;
+      pointer-events: none;
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(1);
+      transition: none;
+    }
+    #portal-zoom-overlay.is-animating {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(var(--zoom-scale, 50));
+      transition: transform 1.2s cubic-bezier(0.25, 1, 0.33, 1), opacity 0.3s ease;
+    }
+
     .gyro-button { display:none; }
     .gyro-button.is-active { border-color:rgba(185,213,202,.75); background:rgba(91,132,116,.42); color:var(--accent-strong); }
     .pnlm-load-box, .pnlm-lbox {
@@ -319,6 +341,7 @@
 <body>
   <div id="panorama-container"></div>
   <div class="viewer-vignette"></div>
+  <div id="portal-zoom-overlay"></div>
 
   <header class="topbar">
     <div class="brand">
@@ -515,7 +538,7 @@
         button.append(number, title);
         button.addEventListener('click', () => {
           if (viewerInstance && String(scene.id) !== String(activeSceneId)) {
-            transitionToScene(scene.id);
+            transitionToSceneDirect(scene.id);
           }
         });
         list.appendChild(button);
@@ -524,25 +547,65 @@
     }
 
     let sceneTransitionToken = 0;
-    async function transitionToScene(sceneId) {
-      if (!viewerInstance || !sceneId || String(sceneId) === String(activeSceneId)) return;
 
-      const targetScene = scenes.find(scene => String(scene.id) === String(sceneId));
-      const imageReady = targetScene && preloadedImages.get(targetScene.panorama_url);
+    async function transitionToScenePortal(sceneId, targetScene, clickEvent) {
+      if (!viewerInstance || !sceneId || String(sceneId) === String(activeSceneId)) return;
       const token = ++sceneTransitionToken;
 
-      try {
-        // Smoothly zoom in to ease into the transition (lowering field of view over 1.4 seconds)
-        viewerInstance.setHfov(35, 1400);
-        await new Promise(resolve => window.setTimeout(resolve, 1400));
-        if (token !== sceneTransitionToken || !viewerInstance) return;
+      const overlay = $('portal-zoom-overlay');
+      const circleElement = clickEvent.currentTarget.querySelector('.hotspot-preview-circle');
+      
+      if (circleElement && overlay) {
+        const rect = circleElement.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        
+        overlay.style.left = `${centerX}px`;
+        overlay.style.top = `${centerY}px`;
+        overlay.style.backgroundImage = `url("${String(targetScene.imageUrl || '').replace(/"/g, '%22')}")`;
+        
+        // Calculate required zoom scale to fully fill screen from the click point
+        const maxDim = Math.max(window.innerWidth, window.innerHeight);
+        const scaleFactor = (maxDim / 26) * 2.4;
+        overlay.style.setProperty('--zoom-scale', scaleFactor);
+        
+        overlay.classList.add('is-animating');
+      }
 
+      try {
+        const imageReady = preloadedImages.get(targetScene.imageUrl);
         if (imageReady) await imageReady;
+
+        await new Promise(resolve => window.setTimeout(resolve, 850));
         if (token !== sceneTransitionToken || !viewerInstance) return;
 
         viewerInstance.loadScene(sceneId);
+
+        window.setTimeout(() => {
+          if (overlay) {
+            overlay.classList.remove('is-animating');
+            overlay.style.opacity = '0';
+          }
+        }, 350);
       } catch (error) {
-        console.warn('Transition error, loading scene directly:', error);
+        console.warn('Portal transition fallback:', error);
+        if (token === sceneTransitionToken && viewerInstance) {
+          viewerInstance.loadScene(sceneId);
+          if (overlay) overlay.classList.remove('is-animating');
+        }
+      }
+    }
+
+    async function transitionToSceneDirect(sceneId) {
+      if (!viewerInstance || !sceneId || String(sceneId) === String(activeSceneId)) return;
+      const token = ++sceneTransitionToken;
+      const targetScene = scenes.find(s => String(s.id) === String(sceneId));
+      try {
+        const imageReady = targetScene && preloadedImages.get(targetScene.panorama_url);
+        if (imageReady) await imageReady;
+        if (token !== sceneTransitionToken || !viewerInstance) return;
+        viewerInstance.loadScene(sceneId);
+      } catch (e) {
         if (token === sceneTransitionToken && viewerInstance) viewerInstance.loadScene(sceneId);
       }
     }
@@ -564,7 +627,9 @@
       hotSpotDiv.setAttribute('aria-label', `Navigate to ${args.title || 'another space'}`);
       hotSpotDiv.addEventListener('click', (event) => {
         event.stopPropagation();
-        if (viewerInstance && args.targetSceneId) transitionToScene(args.targetSceneId);
+        if (viewerInstance && args.targetSceneId) {
+          transitionToScenePortal(args.targetSceneId, { imageUrl: args.imageUrl }, event);
+        }
       });
     }
 
