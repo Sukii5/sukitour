@@ -242,7 +242,7 @@
       box-shadow: 0 2px 4px rgba(0,0,0,.2) !important;
     }
 
-    /* Portal Transition Overlay element that zooms the preview icon across the screen */
+    /* Portal Zoom Overlay that dynamically expands the hotspot preview circle */
     #portal-zoom-overlay {
       position: fixed;
       top: 0; left: 0;
@@ -251,7 +251,7 @@
       background-size: cover;
       background-position: center;
       border: 2px solid rgba(255,255,255,0.9);
-      box-shadow: 0 0 0 9999px rgba(5, 9, 13, 0.85);
+      box-shadow: 0 0 0 9999px rgba(5, 9, 13, 0.88);
       z-index: 9999;
       pointer-events: none;
       opacity: 0;
@@ -260,8 +260,8 @@
     }
     #portal-zoom-overlay.is-animating {
       opacity: 1;
-      transform: translate(-50%, -50%) scale(var(--zoom-scale, 50));
-      transition: transform 1.2s cubic-bezier(0.25, 1, 0.33, 1), opacity 0.3s ease;
+      transform: translate(-50%, -50%) scale(var(--zoom-scale, 60));
+      transition: transform 1.25s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.3s ease;
     }
 
     .gyro-button { display:none; }
@@ -564,9 +564,9 @@
         overlay.style.top = `${centerY}px`;
         overlay.style.backgroundImage = `url("${String(targetScene.imageUrl || '').replace(/"/g, '%22')}")`;
         
-        // Calculate required zoom scale to fully fill screen from the click point
+        // Calculate dynamic scale factor to cover entire screen from hotspot point
         const maxDim = Math.max(window.innerWidth, window.innerHeight);
-        const scaleFactor = (maxDim / 26) * 2.4;
+        const scaleFactor = (maxDim / 26) * 2.5;
         overlay.style.setProperty('--zoom-scale', scaleFactor);
         
         overlay.classList.add('is-animating');
@@ -576,7 +576,8 @@
         const imageReady = preloadedImages.get(targetScene.imageUrl);
         if (imageReady) await imageReady;
 
-        await new Promise(resolve => window.setTimeout(resolve, 850));
+        // Synchronize scene loading with the portal zoom animation peak
+        await new Promise(resolve => window.setTimeout(resolve, 900));
         if (token !== sceneTransitionToken || !viewerInstance) return;
 
         viewerInstance.loadScene(sceneId);
@@ -681,7 +682,7 @@
               createTooltipFunc: createPreviewHotspot,
               createTooltipArgs: {
                 title: hs.text || hs.title || targetScene.title || 'Explore space',
-                imageUrl: targetScene.imageUrl || scenesData[0].panorama_url,
+                imageUrl: targetScene.imageUrl || targetScene.panorama_url || scenesData[0].panorama_url,
                 targetSceneId: targetSceneId || firstSceneId
               }
             };
