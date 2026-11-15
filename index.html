@@ -170,7 +170,7 @@
       z-index:100 !important;
     }
 
-    /* Slower, elegant floating animation */
+    /* Slow, elegant floating animation */
     @keyframes hotspotUnifiedFloat {
       0%, 100% {
         transform: translate(-50%, 0);
@@ -251,11 +251,11 @@
       pointer-events:none !important;
     }
     
-    /* Slow Zoom-In transition effect */
+    /* Extended, slow & elegant 3.2s zoom-in transition effect */
     #panorama-container {
-      transform: scale(1.08);
+      transform: scale(1.12);
       transform-origin: 50% 50%;
-      transition: transform 2.2s cubic-bezier(0.25, 1, 0.5, 1);
+      transition: transform 3.2s cubic-bezier(0.22, 1, 0.36, 1);
       will-change: transform;
     }
     #panorama-container.is-zooming {
@@ -543,7 +543,7 @@
       const token = ++sceneTransitionToken;
       const container = $('panorama-container');
 
-      // Trigger slow zoom-in entrance transition
+      // Re-trigger slow, elegant zoom-in entrance
       container.classList.add('is-zooming');
 
       try {
@@ -661,7 +661,7 @@
             showControls: false,
             orientationOnByDefault: true,
             maxHfov: 120,
-            sceneFadeDuration: 0, // Disabled built-in fade duration completely
+            sceneFadeDuration: 0,
             compass: false,
             keyboardZoom: true,
             mouseZoom: true,
