@@ -516,7 +516,7 @@
         button.append(number, title);
         button.addEventListener('click', () => {
           if (viewerInstance && String(scene.id) !== String(activeSceneId)) {
-            transitionToScene(scene.id);
+            transitionToSceneDirect(scene.id);
           }
         });
         list.appendChild(button);
@@ -525,25 +525,44 @@
     }
 
     let sceneTransitionToken = 0;
-    async function transitionToScene(sceneId) {
-      if (!viewerInstance || !sceneId || String(sceneId) === String(activeSceneId)) return;
 
-      const targetScene = scenes.find(scene => String(scene.id) === String(sceneId));
-      const imageReady = targetScene && preloadedImages.get(targetScene.panorama_url);
+    async function transitionToSceneHotspot(sceneId, pitch, yaw, targetSceneUrl) {
+      if (!viewerInstance || !sceneId || String(sceneId) === String(activeSceneId)) return;
       const token = ++sceneTransitionToken;
 
       try {
-        // Smoothly ease-zoom into the transition by lowering the field of view over 1.4 seconds
-        viewerInstance.setHfov(35, 1400);
-        await new Promise(resolve => window.setTimeout(resolve, 1400));
+        // Smoothly pan and zoom directly into the clicked hotspot's coordinates (pitch & yaw) over 1200ms
+        viewerInstance.setPitch(pitch, 1200);
+        viewerInstance.setYaw(yaw, 1200);
+        viewerInstance.setHfov(30, 1200);
+
+        await new Promise(resolve => window.setTimeout(resolve, 1250));
         if (token !== sceneTransitionToken || !viewerInstance) return;
 
+        const targetScene = scenes.find(scene => String(scene.id) === String(sceneId));
+        const imageReady = targetScene && preloadedImages.get(targetScene.panorama_url);
         if (imageReady) await imageReady;
-        if (token !== sceneTransitionToken || !viewerInstance) return;
 
+        if (token !== sceneTransitionToken || !viewerInstance) return;
         viewerInstance.loadScene(sceneId);
       } catch (error) {
-        console.warn('Transition error, loading scene directly:', error);
+        console.warn('Hotspot zoom transition error, loading scene directly:', error);
+        if (token === sceneTransitionToken && viewerInstance) viewerInstance.loadScene(sceneId);
+      }
+    }
+
+    async function transitionToSceneDirect(sceneId) {
+      if (!viewerInstance || !sceneId || String(sceneId) === String(activeSceneId)) return;
+      const token = ++sceneTransitionToken;
+      const targetScene = scenes.find(s => String(s.id) === String(sceneId));
+      try {
+        viewerInstance.setHfov(40, 600);
+        await new Promise(resolve => window.setTimeout(resolve, 600));
+        const imageReady = targetScene && preloadedImages.get(targetScene.panorama_url);
+        if (imageReady) await imageReady;
+        if (token !== sceneTransitionToken || !viewerInstance) return;
+        viewerInstance.loadScene(sceneId);
+      } catch (e) {
         if (token === sceneTransitionToken && viewerInstance) viewerInstance.loadScene(sceneId);
       }
     }
@@ -565,7 +584,7 @@
       hotSpotDiv.addEventListener('click', (event) => {
         event.stopPropagation();
         if (viewerInstance && args.targetSceneId) {
-          transitionToScene(args.targetSceneId);
+          transitionToSceneHotspot(args.targetSceneId, args.pitch, args.yaw, args.imageUrl);
         }
       });
     }
@@ -611,15 +630,19 @@
             const targetSceneId = hs.targetSceneId || hs.target_scene_id || hs.sceneId ||
               hs.scene_id || hs.targetId || hs.id;
             const targetScene = sceneMap[targetSceneId] || {};
+            const hsPitch = Number(hs.pitch) || 0;
+            const hsYaw = Number(hs.yaw) || 0;
             return {
-              pitch: Number(hs.pitch) || 0,
-              yaw: Number(hs.yaw) || 0,
+              pitch: hsPitch,
+              yaw: hsYaw,
               type: 'custom',
               createTooltipFunc: createPreviewHotspot,
               createTooltipArgs: {
                 title: hs.text || hs.title || targetScene.title || 'Explore space',
                 imageUrl: targetScene.imageUrl || targetScene.panorama_url || scenesData[0].panorama_url,
-                targetSceneId: targetSceneId || firstSceneId
+                targetSceneId: targetSceneId || firstSceneId,
+                pitch: hsPitch,
+                yaw: hsYaw
               }
             };
           });
