@@ -51,18 +51,6 @@
       position:absolute; inset:0; z-index:2; pointer-events:none;
       background:linear-gradient(180deg,rgba(3,7,11,.58) 0%,transparent 23%,transparent 63%,rgba(3,7,11,.48) 100%);
     }
-    .scene-fade-overlay {
-      position:absolute; inset:0; z-index:4; pointer-events:none;
-      background:rgba(5,9,13,.5);
-      opacity:0; visibility:hidden;
-      transition:opacity 1.6s cubic-bezier(0.25, 1, 0.5, 1), visibility 1.6s;
-    }
-    .scene-fade-overlay.is-active {
-      opacity:1; visibility:visible;
-    }
-    .scene-fade-overlay.is-revealing {
-      opacity:0; visibility:visible;
-    }
 
     .topbar {
       position:absolute; z-index:20; top:0; left:0; right:0;
@@ -182,7 +170,7 @@
       z-index:100 !important;
     }
 
-    /* Slower, more elegant floating animation (2.4s duration instead of 1.4s) */
+    /* Slower, elegant floating animation */
     @keyframes hotspotUnifiedFloat {
       0%, 100% {
         transform: translate(-50%, 0);
@@ -342,7 +330,6 @@
 <body>
   <div id="panorama-container"></div>
   <div class="viewer-vignette"></div>
-  <div class="scene-fade-overlay" id="scene-fade-overlay" aria-hidden="true"></div>
 
   <header class="topbar">
     <div class="brand">
@@ -554,19 +541,13 @@
       const targetScene = scenes.find(scene => String(scene.id) === String(sceneId));
       const imageReady = targetScene && preloadedImages.get(targetScene.panorama_url);
       const token = ++sceneTransitionToken;
-      const fade = $('scene-fade-overlay');
       const container = $('panorama-container');
 
-      // Slow zoom-in entrance preparation
+      // Trigger slow zoom-in entrance transition
       container.classList.add('is-zooming');
 
       try {
         if (imageReady) await imageReady;
-        if (token !== sceneTransitionToken || !viewerInstance) return;
-
-        fade.classList.remove('is-revealing');
-        fade.classList.add('is-active');
-        await new Promise(resolve => window.setTimeout(resolve, 950));
         if (token !== sceneTransitionToken || !viewerInstance) return;
 
         viewerInstance.loadScene(sceneId);
@@ -680,7 +661,7 @@
             showControls: false,
             orientationOnByDefault: true,
             maxHfov: 120,
-            sceneFadeDuration: 2800,
+            sceneFadeDuration: 0, // Disabled built-in fade duration completely
             compass: false,
             keyboardZoom: true,
             mouseZoom: true,
@@ -694,16 +675,8 @@
           isLoadingScene = false;
           updateSceneUI(viewerInstance.getScene());
           
-          const fade = $('scene-fade-overlay');
           const container = $('panorama-container');
-          
-          fade.classList.remove('is-active');
-          fade.classList.add('is-revealing');
           container.classList.remove('is-zooming');
-
-          window.setTimeout(() => {
-            fade.classList.remove('is-revealing');
-          }, 1600);
 
           if (viewerInstance.getHfov() < 110) viewerInstance.setHfov(110, 0);
           if (isMobileDevice()) enableGyro(false);
